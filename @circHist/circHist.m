@@ -2,8 +2,8 @@ classdef circHist < handle
     %circHist   Class representing a figure with a circular histogram. Constructing an
     %object creates a new figure with polar coordinates containing a histogram. Circular
     %statistics (average angle, mean resultant vector, Rayleigh test of uniformity and
-    %correlation analysis, all computed using the CircStat toolbox) are automatically
-    %calculated and saved as object properties. Note that this is a handle class.
+    %correlation analysis) are automatically calculated using the CircStat toolbox and
+    %saved as object properties. Note that this is a handle class.
     %
     %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
     %                 Ephys class
@@ -51,16 +51,22 @@ classdef circHist < handle
     %                   e.g. from a peri-stimulus-time-histogram; if the input matrix has
     %                   a second column, it is taken as the standard-deviation values for
     %                   each bar.
+    %
     %   psthType        'frequency'(default)/'count'. Based on this, the axis is labelled.
+    %
     %   binSizeSec      Width of bins in seconds. Note that this needs to be specified if
-    %                   psthType is 'frequency'.
+    %                   dataType is 'distribution' and psthType is 'frequency', as well as
+    %                   when dataType is 'psth' and psthType is 'count'.
     %
     %   includePhimax   'on'(default)/'off', plots average angle
+    %
     %   phimax          Numeric value of the average angle. Should be specified if
     %                   dataType is 'psth' and includePhimax is 'on'.
+    %
     %   includeR        'on'(default)/'off', plots resultant vector length as a black
     %                   overlay bar on top of the average angle. The black bar's length
     %                   equals the r-value in percent of the coordinate-system diameter.
+    %
     %   r               Numeric value of the resultant vector length. Should be specified
     %                   if dataType is 'psth' and includeR is 'on'.
     %
@@ -408,8 +414,8 @@ classdef circHist < handle
                 self.phimaxH = polarplot(thetaPhimax,rhoPhimax,lineSp...
                     ,'lineWidth',lineWPhimax,'color',colorPhimax,'Tag','phimax');
             end
-            if ~isempty(r) && includeR
-                rNorm = r * range(rlim); %make vector length relative to plot radius (after shift)
+            if ~isempty(r) && ~isempty(phimax) && includeR
+                rNorm = r * range(rlim) + baseLineOffset; %make vector length relative to plot radius (after shift)
                 thetaR = [phimaxRad,phimaxRad+pi];
                 rohR = [rNorm,rNorm];
                 self.rH = polarplot(thetaR,rohR,lineSp,'lineWidth',lineWR,'color',colorR...
@@ -533,6 +539,23 @@ classdef circHist < handle
             %the current limits by calling rlim.
             rlim(limits); %change limits
             
+            if limits(1) > 0
+                todo = ''; % scale-bar bug in this case---------------------------------------------------
+                rDataOffset = limits(1);
+            else
+                rDataOffset = 0;
+            end
+            
+            nBars = numel(self.barH);
+            for n = 1:nBars
+                currBar = self.barH(n);
+                barHeight = currBar.RData(2);
+                currBar.RData = [rDataOffset,barHeight];                
+            end
+            
+            self.phimaxH.RData(:) = limits(2); %update line data            
+            self.rH.RData(:) = self.r * range(limits) + limits(1);
+            
             % Sometimes, a warning with this identifier is issued for obscure reasons. To
             % suppress this warning, it is converted to an error by calling
             % warning('error',_). This error can then be caught and ignored.
@@ -543,9 +566,6 @@ classdef circHist < handle
                     rethrow(ME);end % re-throw error if it is not this error
             end
             warning(wrn); % set error back to being a warning
-            
-            self.phimaxH.RData(:) = limits(2); %update line data            
-            self.rH.RData(:) = self.r * range(limits);
         end
         %% change bar color
         function set.colorBar(self,color)
@@ -587,7 +607,7 @@ classdef circHist < handle
             stdEnding = self.stdH(~maskLines);
             
             oldEndingWidth = stdEnding(1).LineWidth; %scale proportionally
-            newEndingWidth = oldEndingWidth*scalingFactor;
+            newEndingWidth = oldEndingWidth * scalingFactor;
             
             set(stdMain,'lineWidth',width);
             set(stdEnding,'lineWidth',newEndingWidth);
@@ -595,8 +615,11 @@ classdef circHist < handle
         %% save to pdf
         function toPdf(self,fileName)
             %toPdf  Save histogram as (fileName).pdf.
+            
+            % allow robust input with and without pdf-file-extension
             if strcmpi(fileName(end-3:end),'.pdf')
                 fileName(end-3:end) = ''; end
+            
             saveas(self.figH,[fileName,'.pdf']);
         end
     end
