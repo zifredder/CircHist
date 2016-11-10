@@ -1,5 +1,5 @@
-classdef circHist < handle
-    %circHist   Class representing a figure with a circular histogram. Constructing an
+classdef CircHist < handle
+    %CircHist   Class representing a figure with a circular histogram. Constructing an
     %object creates a new figure with polar coordinates containing a histogram. Circular
     %statistics (average angle, mean resultant vector, Rayleigh test of uniformity and
     %correlation analysis) are automatically calculated using the CircStat toolbox and
@@ -8,10 +8,10 @@ classdef circHist < handle
     %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
     %                 Ephys class
     %
-    %   To change the axis limits, use circHistObj.setRLim([lower,upper]).
+    %   To change the axis limits, use CircHistObj.setRLim([lower,upper]).
     %   To change visual properties, either use the name-value pairs for the constructor
-    %   as specified below or access the graphics-objects, namely circHistObj.polarAxs for
-    %   the coordinate system (font size, line width, etc.) and circHistObj.scaleBar for
+    %   as specified below or access the graphics-objects, namely CircHistObj.polarAxs for
+    %   the coordinate system (font size, line width, etc.) and CircHistObj.scaleBar for
     %   the scale bar (change the axis label here). The scale bar is drawn anew each time
     %   the figure window changes size; note that this is not working flawlessly and check
     %   that the scale bar matches the coordinate-grid after changing the size.
@@ -19,9 +19,9 @@ classdef circHist < handle
     %   plotting, use their handles which are saved as properties. Access them using dot
     %   notation, e.g., obj.phimaxH.lineWidth and delete them using delete(handle).
     %
-    %   Usage:  circHist(data,edges);
-    %           circHist(data,edges,Name,Value);
-    %           obj = circHist(___);
+    %   Usage:  CircHist(data,edges);
+    %           CircHist(data,edges,Name,Value);
+    %           obj = CircHist(___);
     %
     %   Methods:
     %       setRLim([lower,upper])      Change axis limits (get current limits by calling
@@ -155,7 +155,7 @@ classdef circHist < handle
     
     methods
         %% constructor
-        function self = circHist(data,edges,varargin)   
+        function self = CircHist(data,edges,varargin)   
             
             %% validate and parse input
             validateattributes(data,{'numeric','cell'},{'nonempty'});
