@@ -306,6 +306,7 @@ classdef CircHist < handle
                 if ~isFrequency %convert back to counts per bin
                     psthData = psthData * binSizeSec; end
             end
+            self.psthData = psthData;
             % correlation analysis
             [self.corrAnR,self.corrAnP] = ...
                 Ephys.corrAn(binCentersDeg(:),psthData(:,1),axialData);
