@@ -538,6 +538,9 @@ classdef CircHist < handle
         function setRLim(self,limits)
             %setRLim Change scale limits to new two-element vector with [lower,upper]. Get
             %the current limits by calling rlim.
+            %
+            % circHistObj.setRLim(limits);
+            %
             rlim(limits); %change limits
             
             if limits(1) > 0
@@ -616,12 +619,10 @@ classdef CircHist < handle
         %% save to pdf
         function toPdf(self,fileName)
             %toPdf  Save histogram as (fileName).pdf.
+            %
+            %   circHistObj.toPdf(fileName);
             
-            % allow robust input with and without pdf-file-extension
-            if strcmpi(fileName(end-3:end),'.pdf')
-                fileName(end-3:end) = ''; end
-            
-            saveas(self.figH,[fileName,'.pdf']);
+            print(self.figH,fileName,'-dpdf','-fillpage','-painters')
         end
     end
     methods (Static)
