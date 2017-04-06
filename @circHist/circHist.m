@@ -8,16 +8,28 @@ classdef CircHist < handle
     %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
     %                 Ephys class
     %
-    %   To change the axis limits, use CircHistObj.setRLim([lower,upper]).
-    %   To change visual properties, either use the name-value pairs for the constructor
-    %   as specified below or access the graphics-objects, namely CircHistObj.polarAxs for
-    %   the coordinate system (font size, line width, etc.) and CircHistObj.scaleBar for
-    %   the scale bar (change the axis label here). The scale bar is drawn anew each time
-    %   the figure window changes size; note that this is not working flawlessly and check
-    %   that the scale bar matches the coordinate-grid after changing the size.
-    %   To adjust the bars, standard-deviation whiskers, phimax line and r line after
-    %   plotting, use their handles which are saved as properties. Access them using dot
-    %   notation, e.g., obj.phimaxH.lineWidth and delete them using delete(handle).
+    %   Notes and instructions:
+    %   * To change the axis limits, use CircHistObj.setRLim([lower,upper]).
+    %   * To change the scale-label, use CircHistObj.scaleBar.Label.String = 'my label'.
+    %   * To change visual properties, either use the name-value pairs for the constructor
+    %     as specified below, or access the graphics-objects, namely CircHistObj.polarAxs
+    %     for the coordinate system (font size, line width, etc.) and CircHistObj.scaleBar
+    %     for the scale bar (line thickness, label, etc.). The scale bar is drawn anew
+    %     each time the figure-window's size is changed; note that this is not working
+    %     flawlessly and check that the scale bar matches the coordinate-grid after
+    %     changing the figure size.
+    %   * To adjust the bars, standard-deviation whiskers, phimax line and r line after
+    %     plotting, use their handles which are saved as properties. Access them using dot
+    %     notation, e.g., obj.phimaxH.lineWidth, and delete them using delete(handle).
+    %   * Note that the constructed CircHist-object is stored in ax.UserData, where ax is
+    %     the axes the histogram has been plotted into. This may be useful if you plot a
+    %     series of histograms and forget to store the CircHist-objects.
+    %   * Each standard-deviation whisker consists of a long line representing the
+    %     magnitude of the deviation and a very short, thick line that marks the tip of
+    %     the deviation-line. Both line types are comprised in the handle-array obj.stdH;
+    %     however, they can be separately accessed by using
+    %     findobj(obj.figH,'Tag',typeTag), where typeTag is either 'stdWhisk' for the
+    %     "main" line or 'stdWhiskEnd' for the tips.
     %
     %   Usage:  CircHist(data,edges);
     %           CircHist(data,edges,Name,Value);
@@ -87,7 +99,8 @@ classdef CircHist < handle
     %                   multiplied by 2 before calculation).
     %
     %   ax              Axes handle to plot diagram into; becomes polarAxs property
-    %                   (experimental feature, working in principle).
+    %                   (experimental feature, working in principle, but the scale
+    %                   misbehaves).
     %
     %   colorBar        Color of bars (default = [0 .45 .74]; (Matlab blue)).
     %   colorStd        Color of standard-deviation lines (default = 'k').
@@ -96,61 +109,51 @@ classdef CircHist < handle
     %   fontSize        Font size of axis labels (default = 13).
     %
     %
-    %  ---Notes:
-    %       Change axis label: obj.scaleBar.Label.String = 'your label';
-    %
-    %       Each standard-deviation whisker consists of a long line representing the
-    %           magnitude of the deviation and a very short, thick line that marks the tip
-    %           of the deviation-line. Both line types are comprised in the handle-array
-    %           obj.stdH; however, they can be separately accessed by using
-    %           findobj(obj.figH,'Tag',typeTag) where typeTag is either 'stdWhisk' for the
-    %           "main" line or 'stdWhiskEnd' for the tips.
-    %
     %
     %  ---Author: Frederick Zittrell
     %
     %
     properties (SetAccess = immutable)
-        data            %Required input: Data.
-        edges           %Required input: Histogram edges;
+        data            % Required input: Data.
+        edges           % Required input: Histogram edges;
                 
-        dataType        %Optional input; 'distribution'(default)/'psth'
-        psthType        %Optional input; 'frequency'(default)/'count'
-        binSizeSec      %Optional input; Width of bins (s)
-        includePhimax   %Optional input; 'on'(default)/'off'
-        phimax          %Optional input; Numeric value of the average angle
-        includeR        %Optional input; 'on'(default)/'off'
-        r               %Optional input; Numeric value of the resultant vector length
-        baseLineShift   %Optional input; scaling factor for the size of the offset in the middle of the diagram
-        adjustSlope     %Optional input; Slope for scaling of visual properties with bin size
-        axialData       %Optional input; True(default)/false
+        dataType        % Optional input; 'distribution'(default)/'psth'
+        psthType        % Optional input; 'frequency'(default)/'count'
+        binSizeSec      % Optional input; Width of bins (s)
+        includePhimax   % Optional input; 'on'(default)/'off'
+        phimax          % Optional input; Numeric value of the average angle
+        includeR        % Optional input; 'on'(default)/'off'
+        r               % Optional input; Numeric value of the resultant vector length
+        baseLineShift   % Optional input; scaling factor for the size of the offset in the middle of the diagram
+        adjustSlope     % Optional input; Slope for scaling of visual properties with bin size
+        axialData       % Optional input; True(default)/false
         
-        polarAxs        %Polaraxes handle. Change visual properties such as line width of the axes here.
-        figH            %Handle to figure where diagram is plotted
-        phimaxH         %Handle to the phimax line
-        rH              %Handle to the r line
-        barH            %Array of handles to the bars (which are line objects)
-        stdH            %Array of handles to the standard-deviation whiskers (which are line objects)
+        polarAxs        % Polaraxes handle. Change visual properties such as line width of the axes here.
+        figH            % Handle to figure where diagram is plotted
+        phimaxH         % Handle to the phimax line
+        rH              % Handle to the r line
+        barH            % Array of handles to the bars (which are line objects)
+        stdH            % Array of handles to the standard-deviation whiskers (which are line objects)
         
-        psthData        %PSTH data as plotted; 1st column average counts, 2nd column standard deviations
-        rayleighP       %P-value of Rayleigh test of uniformity
-        rayleighZ       %Z-value of Rayleigh test of uniformity
-        corrAnP         %P-value of correlation analysis
-        corrAnR         %R-value of correlation analysis (square this to get the coefficient of determination)
+        psthData        % PSTH data as plotted; 1st column average counts, 2nd column standard deviations
+        rayleighP       % P-value of Rayleigh test of uniformity
+        rayleighZ       % Z-value of Rayleigh test of uniformity
+        corrAnP         % P-value of correlation analysis
+        corrAnR         % R-value of correlation analysis (square this to get the coefficient of determination)
     end
     
     properties
-        scaleBar        %Handle of scale bar. Use to access visual properties.
-        axisLabel       %Label of scale bar as originally set (change the scaleBar.Label.String property to adjust)
+        scaleBar        % Handle of scale bar. Use to access visual properties.
+        axisLabel       % Label of scale bar as originally set (change the scaleBar.Label.String property to adjust)
         
-        colorBar        %Optional input; Color of bars (default = [0 .45 .74]; (Matlab blue))
-        colorStd        %Optional input; Color of standard-deviation lines (default = 'k')
-        colorPhimax     %Optional input; Color of phimax line (default = [.85 .33 .1]; (orange))
-        colorR          %Optional input; Color of r line (default = 'k')
-        fontSize        %Optional input; Font size of axis labels (default = 13)
+        colorBar        % Optional input; Color of bars (default = [0 .45 .74]; (Matlab blue))
+        colorStd        % Optional input; Color of standard-deviation lines (default = 'k')
+        colorPhimax     % Optional input; Color of phimax line (default = [.85 .33 .1]; (orange))
+        colorR          % Optional input; Color of r line (default = 'k')
+        fontSize        % Optional input; Font size of axis labels (default = 13)
         
-        barWidth        %Width of bars. Change this property to adjust the bar width after plotting.
-        stdWidth        %Width of standard-deviation whiskers. For adjustment after plotting.
+        barWidth        % Width of bars. Change this property to adjust the bar width after plotting.
+        stdWidth        % Width of standard-deviation whiskers. For adjustment after plotting.
     end
     
     methods
@@ -320,11 +323,12 @@ classdef CircHist < handle
             else
                 currFig = figure;
             end
-            currFig.Visible = 'off';
+%             currFig.Visible = 'off';
             self.figH = currFig;
             set(0,'currentfigure',currFig);
             polarplot(0);hold on
             self.polarAxs = gca;
+            self.polarAxs.UserData = self;
             polarAxs = self.polarAxs;
             polarAxs.ThetaZeroLocation = 'top';
             polarAxs.Tag = 'Polar';
