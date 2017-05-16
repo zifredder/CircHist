@@ -1,9 +1,10 @@
 classdef CircHist < handle
     %CircHist   Class representing a figure with a circular histogram. Constructing an
-    %object creates a new figure with polar coordinates containing a histogram. Circular
-    %statistics (average angle, mean resultant vector, Rayleigh test of uniformity and
-    %correlation analysis) are automatically calculated using the CircStat toolbox and
-    %saved as object properties. Note that this is a handle class.
+    %object creates a polar-coordinates axes containing a histogram. Circular statistics
+    %(average angle, mean resultant vector, Rayleigh test of uniformity and
+    %circular-linear correlation) are automatically calculated using the CircStat toolbox
+    %and saved as object properties. Note that this is a handle class, but that properties
+    %of the plot can be accessed via properties and methods of the created object.
     %
     %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
     %                 Ephys class
@@ -15,7 +16,7 @@ classdef CircHist < handle
     %     as specified below, or access the graphics-objects, namely CircHistObj.polarAxs
     %     for the coordinate system (font size, line width, etc.) and CircHistObj.scaleBar
     %     for the scale bar (line thickness, label, etc.). The scale bar is drawn anew
-    %     each time the figure-window's size is changed; note that this is not working
+    %     each time the figure-window's size is changed; note that this may not work
     %     flawlessly and check that the scale bar matches the coordinate-grid after
     %     changing the figure size.
     %   * To adjust the bars, standard-deviation whiskers, phimax line and r line after
@@ -28,8 +29,11 @@ classdef CircHist < handle
     %     magnitude of the deviation and a very short, thick line that marks the tip of
     %     the deviation-line. Both line types are comprised in the handle-array obj.stdH;
     %     however, they can be separately accessed by using
-    %     findobj(obj.figH,'Tag',typeTag), where typeTag is either 'stdWhisk' for the
+    %     findobj(obj.polarAxs,'Tag',typeTag), where typeTag is either 'stdWhisk' for the
     %     "main" line or 'stdWhiskEnd' for the tips.
+    %   * Consider creating a new figure for each histogram, because there may be
+    %     side-effects regarding the axis and the scale bar if the same axes-object or
+    %     figure-window are used.
     %
     %   Usage:  CircHist(data,edges);
     %           CircHist(data,edges,Name,Value);
@@ -43,9 +47,11 @@ classdef CircHist < handle
     %       colorStd                    Change standard-deviation-whisker color
     %       stdWidth                    Change standard-deviation-whisker width
     %       toPdf(fileName)             Save as pdf-file with the specified file name
+    %       toPng(fileName,resol)       Save as png-file with the specified file name at
+    %                                   the optionally specified resolution
     %
     %
-    %   ---Required input:
+    %   ---Mandatory input:
     %   data            Either one vector of angle samples (distribution), a cell array of
     %                   such samples, or a two-column matrix of N length where N is the
     %                   number of bins, the first column contains the bar heights and the
@@ -54,7 +60,7 @@ classdef CircHist < handle
     %                   the input data, specify the dataType property.
     %   edges           Edges (°) of histogram, e.g. [0:20:360] for 20° bins.
     %
-    %   ---Optional input:
+    %   ---Optional Name-Value pair input:
     %   dataType        'distribution'(default)/'psth'. Type of input data: 'distribution'
     %                   treats the input data as distributions of degree values; the data
     %                   of each input vector are binned inside the specified edges, each
@@ -64,7 +70,7 @@ classdef CircHist < handle
     %                   a second column, it is taken as the standard-deviation values for
     %                   each bar.
     %
-    %   psthType        'frequency'(default)/'count'. Based on this, the axis is labelled.
+    %   psthType        'count'(default)/'frequency'. Based on this, the axis is labelled.
     %
     %   binSizeSec      Width of bins in seconds. Note that this needs to be specified if
     %                   dataType is 'distribution' and psthType is 'frequency', as well as
@@ -93,14 +99,14 @@ classdef CircHist < handle
     %   adjustSlope     Slope that defines how strong optical properties such as bar width
     %                   scale with bin-size; default = 0.3.
     %
-    %   axialData       True(default)/false, specifying whether or not input data are
+    %   areAxialData    True(default)/false, specifying whether or not input data are
     %                   axial; else they are considered circular. This is taken into
     %                   account for statistical computations (axial data are are
     %                   multiplied by 2 before calculation).
     %
-    %   ax              Axes handle to plot diagram into; becomes polarAxs property
-    %                   (experimental feature, working in principle, but the scale
-    %                   misbehaves).
+    %   ax              Axes handle to plot diagram into; becomes polarAxs property. Note
+    %                   that the referenced axes must be a 'polaraxes'. (experimental
+    %                   feature, working in principle, but the scale misbehaves).
     %
     %   colorBar        Color of bars (default = [0 .45 .74]; (Matlab blue)).
     %   colorStd        Color of standard-deviation lines (default = 'k').
@@ -112,7 +118,7 @@ classdef CircHist < handle
     %
     %  ---Author: Frederick Zittrell
     %
-    %
+    % See also polaraxes
     properties (SetAccess = immutable)
         data            % Required input: Data.
         edges           % Required input: Histogram edges;
@@ -126,14 +132,10 @@ classdef CircHist < handle
         r               % Optional input; Numeric value of the resultant vector length
         baseLineShift   % Optional input; scaling factor for the size of the offset in the middle of the diagram
         adjustSlope     % Optional input; Slope for scaling of visual properties with bin size
-        axialData       % Optional input; True(default)/false
+        areAxialData    % Optional input; True(default)/false
         
         polarAxs        % Polaraxes handle. Change visual properties such as line width of the axes here.
         figH            % Handle to figure where diagram is plotted
-        phimaxH         % Handle to the phimax line
-        rH              % Handle to the r line
-        barH            % Array of handles to the bars (which are line objects)
-        stdH            % Array of handles to the standard-deviation whiskers (which are line objects)
         
         psthData        % PSTH data as plotted; 1st column average counts, 2nd column standard deviations
         rayleighP       % P-value of Rayleigh test of uniformity
@@ -146,6 +148,11 @@ classdef CircHist < handle
         scaleBar        % Handle of scale bar. Use to access visual properties.
         axisLabel       % Label of scale bar as originally set (change the scaleBar.Label.String property to adjust)
         
+        phimaxH         % Handle to the phimax line
+        rH              % Handle to the r line
+        barH            % Array of handles to the bars (which are line objects)
+        stdH            % Array of handles to the standard-deviation whiskers (which are line objects)
+        
         colorBar        % Optional input; Color of bars (default = [0 .45 .74]; (Matlab blue))
         colorStd        % Optional input; Color of standard-deviation lines (default = 'k')
         colorPhimax     % Optional input; Color of phimax line (default = [.85 .33 .1]; (orange))
@@ -154,11 +161,14 @@ classdef CircHist < handle
         
         barWidth        % Width of bars. Change this property to adjust the bar width after plotting.
         stdWidth        % Width of standard-deviation whiskers. For adjustment after plotting.
+        
+        whiteCircH      % Handles to white bars that obscure the center of the axis
     end
     
     methods
         %% constructor
         function self = CircHist(data,edges,varargin)   
+            %% CircHist obj = CircHist(data,edges,Name,Value)
             
             %% validate and parse input
             validateattributes(data,{'numeric','cell'},{'nonempty'});
@@ -166,12 +176,17 @@ classdef CircHist < handle
             self.data  = data;
             self.edges = edges;
             
-            validColor = @(x)validateattributes(x,{'numeric','char'},{'vector'});
+            if exist('isColorSpec','file')
+                validColor = @isColorSpec; % custom function, may not be present
+            else
+                validColor = @(x)validateattributes(x,{'numeric','char'},{'vector'});
+            end
+            
             validScalarNum = @(N) isnumeric(N) & isscalar(N);
             
             %default values
             def.dataType      = 'distribution';
-            def.psthType      = 'frequency';
+            def.psthType      = 'count';
             def.binSizeSec    = [];
             def.includePhimax = 'on';
             def.phimax        = [];
@@ -190,7 +205,8 @@ classdef CircHist < handle
             pr = inputParser;
             addOptional(pr,'dataType',def.dataType,...
                 @(str) any(strcmpi(str,{'distribution','psth'})));
-            addOptional(pr,'psthType',  def.psthType,@(str) any(strcmpi(str,{'frequency','count'})));
+            addOptional(pr,'psthType',  def.psthType,...
+                @(str) any(strcmpi(str,{'frequency','count'})));
             addOptional(pr,'binSizeSec',def.binSizeSec,...
                 @(x) validateattributes(x,{'numeric'},{'scalar'}));
             
@@ -200,10 +216,10 @@ classdef CircHist < handle
             addParameter(pr,'r'            ,def.r,validScalarNum);
             addParameter(pr,'baseLineShift',def.baseLineShift,validScalarNum);
             addParameter(pr,'adjustSlope'  ,def.adjustSlope,validScalarNum);
-            addParameter(pr,'axialData'    ,def.axialData,...
+            addParameter(pr,'areAxialData' ,def.axialData,...
                 @(x) validateattributes(x,{'logical'},{'scalar'}));
             addParameter(pr,'ax'           ,def.axes...
-                ,@(x) validateattributes(x,{'matlab.graphics.axis.Axes'},{'scalar'}));
+                ,@(x) validateattributes(x,{'matlab.graphics.axis.PolarAxes'},{'scalar'}));
             
             addParameter(pr,'colorBar',   def.colorBar,   validColor);
             addParameter(pr,'colorStd',   def.colorStd,   validColor);
@@ -232,14 +248,12 @@ classdef CircHist < handle
             baseLineShift      = self.baseLineShift;
             self.adjustSlope   = pr.Results.adjustSlope;
             adjustSlope        = self.adjustSlope;
-            self.axialData     = pr.Results.axialData;
-            axialData          = self.axialData;
+            self.areAxialData  = pr.Results.areAxialData;
+            areAxialData       = self.areAxialData;
             ax                 = pr.Results.ax;
             
             self.colorBar    = pr.Results.colorBar;
-            colorBar         = self.colorBar;
             self.colorStd    = pr.Results.colorStd;
-            colorStd         = self.colorStd;
             self.colorPhimax = pr.Results.colorPhimax;
             colorPhimax      = self.colorPhimax;
             self.colorR      = pr.Results.colorR;
@@ -259,9 +273,9 @@ classdef CircHist < handle
             
             %%
             if isFrequency %set axis label
-                self.axisLabel = 'Activity /imp/s';
+                self.axisLabel = 'Frequency /Hz';
             else
-                self.axisLabel = 'Spikes per bin';
+                self.axisLabel = 'Counts per bin';
             end
             % deduce histogram data from edges
             binSizeDeg = abs(edges(1) - edges(2));
@@ -288,11 +302,11 @@ classdef CircHist < handle
                 psthData(:,2) = std(psth,0,2);
                 %phimax, r, rayleigh
                 degPool = vertcat(data{:}); %column-vector of all data points
-                self.phimax  = Ephys.phimax(degPool,axialData);
+                self.phimax  = Ephys.phimax(degPool,areAxialData);
                 phimax       = self.phimax;
-                self.r       = Ephys.r(degPool,axialData);
+                self.r       = Ephys.r(degPool,areAxialData);
                 r            = self.r;
-                [self.rayleighP,self.rayleighZ] = Ephys.rayl(degPool,axialData);
+                [self.rayleighP,self.rayleighZ] = Ephys.rayl(degPool,areAxialData);
                 pRayl = self.rayleighP;
                 zRayl = self.rayleighZ;
             else %PSTH-data
@@ -312,75 +326,39 @@ classdef CircHist < handle
             self.psthData = psthData;
             % correlation analysis
             [self.corrAnR,self.corrAnP] = ...
-                Ephys.corrAn(binCentersDeg(:),psthData(:,1),axialData);
+                Ephys.corrAn(binCentersDeg(:),psthData(:,1),areAxialData);
             corrAnR = self.corrAnR;
             corrAnP = self.corrAnP;
             
             %% initialize figure, set visual properties
             if ~isempty(ax) && isvalid(ax)
-                currFig = gcf;
-                currFig.CurrentAxes = ax;
+                currFig = ax.Parent;
             else
-                currFig = figure;
+                currFig = gcf;
             end
-%             currFig.Visible = 'off';
+            currFig.Visible = 'off';
             self.figH = currFig;
             set(0,'currentfigure',currFig);
             polarplot(0);hold on
+            set(currFig,'color',[1,1,1]) % white background
             self.polarAxs = gca;
+            
+            % self-reference in property for hyper-redundancy (this is actually quite
+            % handy if you want to retrieve the circHist-object from a figure)
             self.polarAxs.UserData = self;
+            
             polarAxs = self.polarAxs;
             polarAxs.ThetaZeroLocation = 'top';
             polarAxs.Tag = 'Polar';
             
             lineSp = '-'; %continuous lines
-            colorBase = colorBar; %baseline color
-            lineWBar = adjustSlope * binSizeDeg + 4; %bar width
-            self.barWidth = lineWBar;
-            lineWStd = lineWBar / 3;
-            self.stdWidth = lineWStd;
-            %whisker-endings consist of a short line starting at (whisker-end - whiskLen)
-            %and ending at the whisker-end
-            lineWStdWhisk = lineWBar * 0.7; %width
-            whiskLen = .15;
+            self.barWidth = adjustSlope * binSizeDeg + 4; %bar width
+            self.stdWidth = self.barWidth / 3;
             lineWPhimax = adjustSlope * binSizeDeg/10 + 2;
             lineWR = lineWPhimax * 1.5;
-            lineWBase = 1;
             
-            %% plot bars
-            nBars = numel(binCentersDeg);
-            for n = 1:nBars
-                currAng = deg2rad(binCentersDeg(n)); %angle of bar in rad
-                currVal = psthData(n,1);
-                currStd = psthData(n,2);
-                
-                %specify the bar: a line between the base line of the plot (at theta = angle and rho =
-                %0) and the point specified by the angle and the radius-value (at theta = angle and
-                %rho = bar height)
-                thetaVal = [currAng,currAng];
-                rhoVal = [0,currVal];
-                polarplot(thetaVal,rhoVal,lineSp,'lineWidth',lineWBar,'color',colorBar...
-                    ,'Tag','histBar');
-                
-                if currStd > 0
-                    %specify the standard deviation whisker: a line between the outer end of the bar
-                    %(at theta = angle and rho = bar height) and the same end extended by the standard
-                    %deviation (at theta = angle and rho = bar height + standard deviation)
-                    thetaStd = [currAng,currAng];
-                    rhoStd = [currVal,currVal+currStd];
-                    polarplot(thetaStd,rhoStd,lineSp,'lineWidth',lineWStd...
-                        ,'color',colorStd,'Tag','stdWhisk');
-                    
-                    %whisker-endings: short lines thicker than the whisker, starting at (whisker-end -
-                    %whiskLen) and ending at the whisker-end
-                    thetaStdWhisk = thetaStd;
-                    rhoStdWhisk = [currVal+currStd-whiskLen,currVal+currStd];
-                    polarplot(thetaStdWhisk,rhoStdWhisk,lineSp,'lineWidth',...
-                        lineWStdWhisk,'color',colorStd,'Tag','stdWhiskEnd');
-                end
-            end
-            self.barH = findobj(self.figH,'Tag','histBar');
-            self.stdH = findobj(self.figH,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
+            %% draw bars and whiskers
+            self.drawBars
             %%
             circR = max(rlim); %radius of plot in data units
             
@@ -393,20 +371,7 @@ classdef CircHist < handle
                 baseLineOffset = 0;
             end
             
-            todo ='';
-            %TODO: plot white lines with the same width as the 'bars' between baseline and center to
-            %make the center-hole white without ticks and lines. The below crap does not work yet.
-            % rhoWhite = [baseLineOffset,0-lineWBase];
-            % for n = 1:nBars
-            %     currAng = deg2rad(binCentersDeg(n)); %angle of bar in rad
-            %     polarplot([currAng,currAng],rhoWhite,'linestyle','-','color','w','linewidth',lineWBar);
-            % end
-            
-            %draw baseline
-            thetaBase = 0:deg2rad(binSizeDeg):2*pi; %degree-values between bars
-            rhoBase = zeros(numel(thetaBase),1);
-            polarplot(thetaBase,rhoBase,lineSp,'lineWidth',lineWBase,'color',colorBase...
-                ,'Tag','baseLine');
+            self.drawBaseLine
             
             %shift radius baseline
             polarAxs.RLim = [baseLineOffset,circR];
@@ -416,14 +381,14 @@ classdef CircHist < handle
             if ~isempty(phimax) && includePhimax %plot long diagonal phimax
                 thetaPhimax = [phimaxRad,phimaxRad+pi];
                 rhoPhimax = [circR,circR];
-                self.phimaxH = polarplot(thetaPhimax,rhoPhimax,lineSp...
+                self.phimaxH = polarplot(self.polarAxs,thetaPhimax,rhoPhimax,lineSp...
                     ,'lineWidth',lineWPhimax,'color',colorPhimax,'Tag','phimax');
             end
             if ~isempty(r) && ~isempty(phimax) && includeR
                 rNorm = r * range(rlim) + baseLineOffset; %make vector length relative to plot radius (after shift)
                 thetaR = [phimaxRad,phimaxRad+pi];
                 rohR = [rNorm,rNorm];
-                self.rH = polarplot(thetaR,rohR,lineSp,'lineWidth',lineWR,'color',colorR...
+                self.rH = polarplot(self.polarAxs,thetaR,rohR,lineSp,'lineWidth',lineWR,'color',colorR...
                     ,'Tag','r');
             end
             
@@ -431,9 +396,11 @@ classdef CircHist < handle
             polarAxs.Color = 'none'; %no background
             labels = polarAxs.ThetaTickLabel;
             % add °-sign to labels
-            for n = 1:numel(labels)
-                labels{n} = [labels{n},'°'];end
-            polarAxs.ThetaTickLabel=labels;
+            if ~strcmp(labels{1}(end),'°') % in the case of subsequent plotting into the same axis
+                for n = 1:numel(labels)
+                    labels{n} = [labels{n},'°'];end
+                polarAxs.ThetaTickLabel=labels;
+            end
             polarAxs.ThetaAxis.FontSize = fontSize;
             
             polarAxs.LineWidth = 1;
@@ -448,6 +415,9 @@ classdef CircHist < handle
             polarAxs.MinorGridColor = 'k';
             polarAxs.MinorGridAlpha = 0.5;
             
+            % draw white circle as background in the center
+            self.drawWhiteCirc;
+            
             %% title
             details = sprintf(['N = %u , phimax = %.2f°, r = %.4f\np_{Rayl} = %.3f, ',...
                 'Z_{Rayl} = %.4f, p_{C. an.} = %.3f, R²_{C. an.} = %.3f'],...
@@ -458,16 +428,107 @@ classdef CircHist < handle
             colormap white %for axis appearance
             polarAxs.RTickLabel = [];
             
-            if isempty(ax)
-                currFig.OuterPosition(1) = currFig.OuterPosition(1)/2; %figure-window size
+            if isempty(ax) % adjust figure-window size
+                currFig.OuterPosition(1) = currFig.OuterPosition(1)/2; 
                 currFig.OuterPosition(2) = currFig.OuterPosition(2)/2;
                 currFig.OuterPosition(3) = currFig.OuterPosition(3)*1.2;
                 currFig.OuterPosition(4) = currFig.OuterPosition(4)*1.5;
             end
             
             self.drawScale;
-            currFig.Visible = 'on';
             currFig.SizeChangedFcn = {@self.redrawScale,self};
+
+            currFig.Visible = 'on';
+        end
+        %% drawBars
+        function drawBars(self)
+            % Draws the bars. Needs to be done each time the r-axis limits change because
+            % it's stupid.
+            
+            delete(self.barH);
+            
+            binSizeDeg = abs(self.edges(1) - self.edges(2));
+            binCentersDeg = self.edges(1:end-1) + binSizeDeg/2;
+            
+            lowerLim = self.polarAxs.RLim(1); % lower limit of radius-axis
+            
+            % properties
+            lineSp = '-';
+            lineWBar = self.barWidth;
+            clrBar = self.colorBar;
+            
+            % standard dev. bars and whiskers
+            % whisker-endings consist of a short line starting at (whisker-end - whiskLen)
+            % and ending at the whisker-end
+            lineWStd = self.stdWidth;
+            lineWStdWhisk = lineWBar * 0.7; %width
+            clrStd = self.colorStd;
+            whiskLen = .15;
+            
+            % draw
+            nBars = numel(binCentersDeg);
+            for n = 1:nBars
+                currAng = deg2rad(binCentersDeg(n)); %angle of bar in rad
+                currVal = self.psthData(n,1);
+                if currVal == 0 || currVal <= lowerLim % skip bar-drawing
+                    continue, end
+                currStd = self.psthData(n,2);
+                
+                % specify the bar: a line between the base line of the plot (at theta =
+                % angle and rho = 0) and the point specified by the angle and the
+                % radius-value (at theta = angle and rho = bar height)
+                thetaVal = [currAng,currAng];
+                rhoVal = [0,currVal];
+                % adjust bar-offset depending on axis-offset
+                if lowerLim > 0, rhoVal(1) = lowerLim; end
+                polarplot(self.polarAxs,thetaVal,rhoVal...
+                    ,lineSp,'lineWidth',lineWBar,'color',clrBar,'Tag','histBar');
+                
+                if currStd > 0
+                    % specify the standard deviation whisker: a line between the outer end
+                    % of the bar (at theta = angle and rho = bar height) and the same end
+                    % extended by the standard deviation (at theta = angle and rho = bar
+                    % height + standard deviation)
+                    thetaStd = [currAng,currAng];
+                    rhoStd = [currVal,currVal+currStd];
+                    polarplot(self.polarAxs,thetaStd,rhoStd,lineSp,'lineWidth',lineWStd...
+                        ,'color',clrStd,'Tag','stdWhisk');
+                    
+                    % whisker-endings: short lines thicker than the whisker, starting at
+                    % (whisker-end - whiskLen) and ending at the whisker-end
+                    thetaStdWhisk = thetaStd;
+                    rhoStdWhisk = [currVal+currStd-whiskLen,currVal+currStd];
+                    polarplot(self.polarAxs,thetaStdWhisk,rhoStdWhisk,lineSp,'lineWidth',...
+                        lineWStdWhisk,'color',clrStd,'Tag','stdWhiskEnd');
+                end
+            end
+            self.barH = findobj(self.polarAxs,'Tag','histBar');
+            self.stdH = findobj(self.polarAxs,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
+            uistack(self.phimaxH,'top');
+            uistack(self.rH,'top');
+        end
+        %% drawBaseLine
+        function drawBaseLine(self)
+            % Draws a base line at 0. This function should be called before drawWhiteCirc
+            % is called, else the base line will be obscured by the white area
+            
+            delete(findobj(self.polarAxs,'Tag','baseLine')); % delete old if present
+            % skip drawing if lower axis-limit > 0
+            if self.polarAxs.RLim(1) > 0, return, end
+            
+            % properties
+            tag = 'baseLine';
+            lineSp = '-';
+            lineW = 1;
+            clr = self.colorBar; %baseline color, same as bar-color
+            
+            binSizeDeg = abs(self.edges(1) - self.edges(2));
+            thetaBase = 0:deg2rad(binSizeDeg):2*pi; %degree-values between bars
+            rhoBase = zeros(numel(thetaBase),1);
+            polarplot(self.polarAxs,thetaBase,rhoBase,lineSp,'lineWidth',lineW...
+                ,'color',clr,'Tag',tag);
+            uistack(findobj(self.polarAxs,'Tag',tag),'bottom');
+            uistack(findobj(self.polarAxs,'Tag',tag),'up');
         end
         %% drawScale; draw scale bar
         function drawScale(self)
@@ -475,6 +536,7 @@ classdef CircHist < handle
             %drawn each time the figure size is changed. The scale bar is actually a
             %colorbar-object, thus it does not behave as neat as a conventional axis.
             
+            self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
             pAx = self.polarAxs;
             scl = self.scaleBar;
             
@@ -510,7 +572,11 @@ classdef CircHist < handle
             
             sclWidth = 0.015;
             sclHeight = polarHeight/2; %halve the height -> bar spans from center to top
-            offset = sclHeight * abs(pAx.RLim(1))/range(pAx.RLim);
+            lowerLim = pAx.RLim(1);
+            if lowerLim < 0
+                offset = sclHeight * abs(lowerLim)/range(pAx.RLim);
+            else, offset = 0;
+            end
             sclHeight = sclHeight - offset; %adjust baseline shift
             sclBot = polarBot + polarHeight - sclHeight; %calculate baseline position
             scl.Position = [pAx.Position(1),sclBot,sclWidth,sclHeight];
@@ -523,9 +589,11 @@ classdef CircHist < handle
             scl.Position(1) = pAx.Position(1) - moveLeft; %move
             
             scl.Label.String = label;
-            scl.Limits = [0,max(pAx.RLim)];
+            lowerLimScl = lowerLim;
+            if lowerLimScl < 0, lowerLimScl = 0; end
+            scl.Limits = [lowerLimScl,max(pAx.RLim)];
             sclTicks = pAx.RTick; %use ticks as produced by the polarplot function
-            sclTicks = sclTicks(sclTicks >= 0);
+            sclTicks = sclTicks(sclTicks >= lowerLimScl);
             scl.Ticks = sclTicks;
             scl.Box = 'off';
             scl.TickLength = 0.04;
@@ -537,6 +605,27 @@ classdef CircHist < handle
             if ~initialDraw
                 scl.LineWidth = oldLineWidth;
             end
+            self.figH.Visible = 'on';
+        end
+        %% draw white circle in the middle to obscure the axis-lines
+        function drawWhiteCirc(self)
+                        
+            if ~isempty(self.whiteCircH)
+                delete(self.whiteCircH); end
+                        
+            baseLineOffset = rlim;
+            baseLineOffset = baseLineOffset(1);
+            if baseLineOffset >= 0, return, end
+            
+            rhoWhite = [baseLineOffset,0];
+            thetaWhite = deg2rad(0:2:358);
+            for t = 1:numel(thetaWhite)
+                currAng = thetaWhite(t);
+                polarplot(self.polarAxs,[currAng,currAng],rhoWhite...
+                    ,'linestyle','-','color','w','linewidth',3,'Tag','whiteCirc');
+            end
+            self.whiteCircH = findobj(self.polarAxs,'Tag','whiteCirc');
+            uistack(self.whiteCircH,'bottom'); % move lines to lowest graphical layer
         end
         %% change scale limits
         function setRLim(self,limits)
@@ -547,19 +636,20 @@ classdef CircHist < handle
             %
             rlim(limits); %change limits
             
-            if limits(1) > 0
-                todo = ''; % scale-bar bug in this case---------------------------------------------------
-                rDataOffset = limits(1);
-            else
-                rDataOffset = 0;
-            end
-            
-            nBars = numel(self.barH);
-            for n = 1:nBars
-                currBar = self.barH(n);
-                barHeight = currBar.RData(2);
-                currBar.RData = [rDataOffset,barHeight];                
-            end
+%             if limits(1) > 0
+%                 rDataOffset = limits(1);
+%             else
+%                 rDataOffset = 0;
+%             end
+%             
+%             nBars = numel(self.barH);
+%             for n = 1:nBars
+%                 currBar = self.barH(n);
+%                 barHeight = currBar.RData(2);
+%                 currBar.RData = [rDataOffset,barHeight];                
+%             end
+
+            self.drawBars
             
             self.phimaxH.RData(:) = limits(2); %update line data            
             self.rH.RData(:) = self.r * range(limits) + limits(1);
@@ -574,11 +664,14 @@ classdef CircHist < handle
                     rethrow(ME);end % re-throw error if it is not this error
             end
             warning(wrn); % set error back to being a warning
+            
+            self.drawBaseLine
+            self.drawWhiteCirc; % adjust background
         end
         %% change bar color
         function set.colorBar(self,color)
             self.colorBar = color;
-            lineObjArr = findobj(self.figH,'Tag','histBar','-or','Tag','baseLine');
+            lineObjArr = findobj(self.polarAxs,'Tag','histBar','-or','Tag','baseLine');
             set(lineObjArr,'color',color);
         end
         %% change bar width
@@ -628,10 +721,24 @@ classdef CircHist < handle
             
             print(self.figH,fileName,'-dpdf','-fillpage','-painters')
         end
+        %% save to png
+        function toPng(self,fileName,resol)
+            %toPng Save histogram as (filename).png at the optionally specified resolution
+            %(default = 90 dpi). Specify resol as a string of the pattern '-r90'.
+            %
+            %   obj.toPng(filename);
+            %   obj.toPng(filename,resol);
+            
+            if nargin < 3
+                resol = '-r90';
+            end
+            print(self.figH,fileName,'-dpng','-opengl',resol);           
+        end
     end
     methods (Static)
         %%
         function redrawScale(~,~,circHistObj)
+           set(0,'currentfigure',gcbf);
            circHistObj.drawScale;
        end
     end
