@@ -9,49 +9,57 @@ classdef CircHist < handle
     %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
     %                 Ephys class
     %
-    %   Notes and instructions:
-    %   * To change the axis limits, use CircHistObj.setRLim([lower,upper]).
-    %   * To change the scale-label, use CircHistObj.scaleBar.Label.String = 'my label'.
-    %   * To change visual properties, either use the name-value pairs for the constructor
-    %     as specified below, or access the graphics-objects, namely CircHistObj.polarAxs
-    %     for the coordinate system (font size, line width, etc.) and CircHistObj.scaleBar
-    %     for the scale bar (line thickness, label, etc.). The scale bar is drawn anew
-    %     each time the figure-window's size is changed; note that this may not work
-    %     flawlessly and check that the scale bar matches the coordinate-grid after
-    %     changing the figure size.
-    %   * To adjust the bars, standard-deviation whiskers, phimax line and r line after
-    %     plotting, use their handles which are saved as properties. Access them using dot
-    %     notation, e.g., obj.phimaxH.lineWidth, and delete them using delete(handle).
-    %   * Note that the constructed CircHist-object is stored in ax.UserData, where ax is
-    %     the axes the histogram has been plotted into. This may be useful if you plot a
-    %     series of histograms and forget to store the CircHist-objects.
-    %   * Each standard-deviation whisker consists of a long line representing the
-    %     magnitude of the deviation and a very short, thick line that marks the tip of
-    %     the deviation-line. Both line types are comprised in the handle-array obj.stdH;
-    %     however, they can be separately accessed by using
-    %     findobj(obj.polarAxs,'Tag',typeTag), where typeTag is either 'stdWhisk' for the
-    %     "main" line or 'stdWhiskEnd' for the tips.
-    %   * Consider creating a new figure for each histogram, because there may be
-    %     side-effects regarding the axis and the scale bar if the same axes-object or
-    %     figure-window are used.
-    %
     %   Usage:  CircHist(data,edges);
     %           CircHist(data,edges,Name,Value);
     %           obj = CircHist(___);
     %
+    %   Notes and instructions:
+    %   * To change the axis limits, use obj.setRLim([lower,upper]).
+    %   * To change the scale-label, use obj.scaleBar.Label.String = 'my label'.
+    %   * To change visual properties, either use the name-value pairs for the constructor
+    %     as specified below, or access the graphics-objects, namely obj.polarAxs for the
+    %     coordinate system (font size, line width, etc.) and obj.scaleBar for the scale
+    %     bar (line thickness, label, etc.). The scale bar is drawn anew each time the
+    %     figure-window's size is changed; note that this may not work flawlessly and
+    %     check that the scale bar matches the coordinate-grid after changing the figure
+    %     size.
+    %   * To adjust the bars, standard-deviation whiskers, phimax line and r line after
+    %     plotting, use their handles which are saved as properties. Access them using dot
+    %     notation, e.g., h = obj.phimaxH.lineWidth, and delete them using delete(h).
+    %   * Note that the constructed CircHist-object handle is stored in AX.UserData, where
+    %     AX is the axes the histogram has been plotted into. This may be useful if you
+    %     plot a series of histograms and forget to store the CircHist-objects.
+    %   * Each standard-deviation whisker consists of a long line representing the
+    %     magnitude of the deviation and a very short, thick line that marks the tip of
+    %     the deviation-line. Both line types are comprised in the handle-array obj.stdH;
+    %     however, they can be separately accessed by using
+    %     findobj(obj.polarAxs,'Tag',TYPETAG), where TYPETAG is either 'stdWhisk' for the
+    %     "main" line or 'stdWhiskEnd' for the tips.
+    %   * Consider creating a new figure for each histogram because there may be
+    %     side-effects regarding the axis and the scale bar if the same axes-object or
+    %     figure-window are used.
+    %
+    %
     %   Methods:
-    %       setRLim([lower,upper])      Change axis limits (get current limits by calling
-    %                                   rlim)
-    %       colorBar                    Change bar color (usage: obj.colorBar = newcolor)
+    %       setRLim([lower,upper])      Change axis limits (usage:
+    %                                   obj.setRLim([lower,upper])) (get current limits by
+    %                                   calling rlim)
+    %       colorBar                    Change bar color (usage: obj.colorBar = newColor)
     %       barWidth                    Change bar width (usage: obj.barWidth = newWidth)
-    %       colorStd                    Change standard-deviation-whisker color
-    %       stdWidth                    Change standard-deviation-whisker width
+    %       colorStd                    Change standard-deviation-whisker color (usage as
+    %                                   above)
+    %       stdWidth                    Change standard-deviation-whisker width (usage as
+    %                                   above)
     %       toPdf(fileName)             Save as pdf-file with the specified file name
     %       toPng(fileName,resol)       Save as png-file with the specified file name at
-    %                                   the optionally specified resolution
+    %                                   the optionally specified resolution (e.g. '-r300')
+    %       drawCirc(rho,lineSpec)      Draws a circle in the plot with radius RHO, line
+    %                                   appearance optionally specified by LINESPEC (see
+    %                                   doc LineSpec). Optionally returns the handle to
+    %                                   the graphics object. Example usage:
+    %                                   h = obj.drawCirc(15,'-g','LineWidth',4)
     %
-    %
-    %   ---Mandatory input:
+    %   ---Required input:
     %   data            Either one vector of angle samples (distribution), a cell array of
     %                   such samples, or a two-column matrix of N length where N is the
     %                   number of bins, the first column contains the bar heights and the
@@ -65,31 +73,33 @@ classdef CircHist < handle
     %                   treats the input data as distributions of degree values; the data
     %                   of each input vector are binned inside the specified edges, each
     %                   bin is averaged and the standard deviation is calculated. 'psth'
-    %                   treats the data as already binned data (converted to frequency),
-    %                   e.g. from a peri-stimulus-time-histogram; if the input matrix has
-    %                   a second column, it is taken as the standard-deviation values for
-    %                   each bar.
+    %                   treats the data as already binned data in Hz, e.g. from a
+    %                   peri-stimulus-time-histogram; if the input matrix has a second
+    %                   column, it is taken as the standard-deviation values for each bar.
     %
-    %   psthType        'count'(default)/'frequency'. Based on this, the axis is labelled.
+    %   psthType        'count'(default)/'frequency'. Based on this, the plotted values
+    %                   are either counts per bin or counts per second (Hz). Note that
+    %                   BINSIZESEC may need to be specified, based on DATATYPE and
+    %                   PSTHTYPE.
     %
     %   binSizeSec      Width of bins in seconds. Note that this needs to be specified if
-    %                   dataType is 'distribution' and psthType is 'frequency', as well as
-    %                   when dataType is 'psth' and psthType is 'count'.
+    %                   DATATYPE is 'distribution' and PSTHTYPE is 'frequency', as well as
+    %                   when DATATYPE is 'psth' and PSTHTYPE is 'count'.
     %
-    %   includePhimax   'on'(default)/'off', plots average angle
+    %   includePhimax   'on'(default)/'off', plots average angle.
     %
     %   phimax          Numeric value of the average angle. Should be specified if
-    %                   dataType is 'psth' and includePhimax is 'on'.
+    %                   DATATYPE is 'psth' and INCLUDEPHIMAX is 'on'.
     %
-    %   includeR        'on'(default)/'off', plots resultant vector length as a black
+    %   includeR        'on'(default)/'off', plots resultant vector length (r) as a black
     %                   overlay bar on top of the average angle. The black bar's length
     %                   equals the r-value in percent of the coordinate-system diameter.
     %
     %   r               Numeric value of the resultant vector length. Should be specified
-    %                   if dataType is 'psth' and includeR is 'on'.
+    %                   if DATATYPE is 'psth' and INCLUDER is 'on'.
     %
     %   baseLineShift   Numeric value (default = 2) specifying the factor that scales the
-    %                   size of the offset in the middle of the plot. The default value
+    %                   size of the offset in the center of the plot. The default value
     %                   produces nice results; lower the value (negative values allowed)
     %                   to increase the size, increase the value to decrease the size.
     %                   Specify it as NaN to produce an offset of 0. (This functionality
@@ -99,12 +109,12 @@ classdef CircHist < handle
     %   adjustSlope     Slope that defines how strong optical properties such as bar width
     %                   scale with bin-size; default = 0.3.
     %
-    %   areAxialData    True(default)/false, specifying whether or not input data are
+    %   areAxialData    True(default)/false, specifies whether or not input data are
     %                   axial; else they are considered circular. This is taken into
-    %                   account for statistical computations (axial data are are
-    %                   multiplied by 2 before calculation).
+    %                   account for statistical computations (axial data are multiplied by
+    %                   2 before calculation).
     %
-    %   ax              Axes handle to plot diagram into; becomes polarAxs property. Note
+    %   ax              Axes handle to plot diagram into; becomes POLARAXS property. Note
     %                   that the referenced axes must be a 'polaraxes'. (experimental
     %                   feature, working in principle, but the scale misbehaves).
     %
@@ -118,7 +128,7 @@ classdef CircHist < handle
     %
     %  ---Author: Frederick Zittrell
     %
-    % See also polaraxes
+    % See also polaraxes polarplot
     properties (SetAccess = immutable)
         data            % Required input: Data.
         edges           % Required input: Histogram edges;
@@ -284,7 +294,7 @@ classdef CircHist < handle
             if areDistribData
                 if isnumeric(data) %if it is only a vector, pack it into a cell
                     validateattributes(data,{'numeric'},{'vector'});
-                    data = {data};
+                    data = {data(:)};
                 end
                 
                 nSamples = numel(data);
@@ -536,7 +546,7 @@ classdef CircHist < handle
             %drawn each time the figure size is changed. The scale bar is actually a
             %colorbar-object, thus it does not behave as neat as a conventional axis.
             
-            self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
+%             self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
             pAx = self.polarAxs;
             scl = self.scaleBar;
             
@@ -556,8 +566,7 @@ classdef CircHist < handle
             
             delete(scl); %deletes the previous bar
             
-            scl = colorbar('Location','westoutside');
-            % plotted like this, the scale height equals the polar plot diameter
+            scl = colorbar('Location','manual');
             self.scaleBar = scl; % re-assign
             
             sclUnitsOld = scl.Units;
@@ -605,7 +614,7 @@ classdef CircHist < handle
             if ~initialDraw
                 scl.LineWidth = oldLineWidth;
             end
-            self.figH.Visible = 'on';
+%             self.figH.Visible = 'on';
         end
         %% draw white circle in the middle to obscure the axis-lines
         function drawWhiteCirc(self)
@@ -629,10 +638,10 @@ classdef CircHist < handle
         end
         %% change scale limits
         function setRLim(self,limits)
-            %setRLim Change scale limits to new two-element vector with [lower,upper]. Get
-            %the current limits by calling rlim.
+            %setRLim Change scale limits specified by the two-element vector LIMITS ==
+            %[lower,upper]. Get the current limits by calling rlim.
             %
-            % circHistObj.setRLim(limits);
+            % circHistObj.setRLim(limits); where LIMITS == [lower,upper]
             %
             rlim(limits); %change limits
             
@@ -649,10 +658,12 @@ classdef CircHist < handle
 %                 currBar.RData = [rDataOffset,barHeight];                
 %             end
 
+            % update line data
             self.drawBars
-            
-            self.phimaxH.RData(:) = limits(2); %update line data            
-            self.rH.RData(:) = self.r * range(limits) + limits(1);
+            if isvalid(self.phimaxH)
+                self.phimaxH.RData(:) = limits(2); end
+            if isvalid(self.rH)
+                self.rH.RData(:) = self.r * range(limits) + limits(1); end
             
             % Sometimes, a warning with this identifier is issued for obscure reasons. To
             % suppress this warning, it is converted to an error by calling
@@ -733,6 +744,30 @@ classdef CircHist < handle
                 resol = '-r90';
             end
             print(self.figH,fileName,'-dpng','-opengl',resol);           
+        end
+        %% drawCirc
+        function hOut = drawCirc(self,rho,varargin)
+            %drawCirc Draws a circle in the plot, radius specified by RHO, appearance
+            %optionally specified by LINESPEC; optionally returns the graphics-object
+            %handle.
+            %
+            %   obj.drawCirc(rho);
+            %   obj.drawCirc(rho,lineSpec);
+            %   h = obj.drawCirc(___);
+            
+            assert(isnumeric(rho) && isscalar(rho) ...
+                ,'First input RHO must be a numerical scalar.');
+                        
+            theta = linspace(0,2*pi,100);
+            h = polarplot(theta,repmat(rho,size(theta)),varargin{:});
+            
+            if isvalid(self.phimaxH)
+                uistack(self.phimaxH,'top'); end
+            if isvalid(self.rH)
+                uistack(self.rH,'top'); end
+            
+            if nargout > 0 
+                hOut = h; end
         end
     end
     methods (Static)
