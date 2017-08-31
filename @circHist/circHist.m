@@ -1,7 +1,7 @@
 classdef CircHist < handle
     %CircHist   Class representing a figure with a circular histogram. Constructing an
     %object creates a polar-coordinates axes containing a histogram. Circular statistics
-    %(average angle, mean resultant vector, Rayleigh test of uniformity and
+    %(average angle, resultant vector length, Rayleigh test of uniformity and
     %circular-linear correlation) are automatically calculated using the CircStat toolbox
     %and saved as object properties. Note that this is a handle class, but that properties
     %of the plot can be accessed via properties and methods of the created object.
@@ -127,6 +127,8 @@ classdef CircHist < handle
     %
     %
     %  ---Author: Frederick Zittrell
+    %   TODO: - Make phimax either an axis or a direction (line from center to
+    %           histogram-edge), based on AREAXIALDATA
     %
     % See also polaraxes polarplot
     properties (SetAccess = immutable)
@@ -290,6 +292,7 @@ classdef CircHist < handle
             % deduce histogram data from edges
             binSizeDeg = abs(edges(1) - edges(2));
             binCentersDeg = edges(1:end-1) + binSizeDeg/2;
+            
             %% operations on input data based on dataType
             if areDistribData
                 if isnumeric(data) %if it is only a vector, pack it into a cell
@@ -387,19 +390,32 @@ classdef CircHist < handle
             polarAxs.RLim = [baseLineOffset,circR];
             
             %% phimax and r
+            % based on AREAXIALDATA, the phimax- and r-lines are axes in the histogram, or
+            % lines with the phimax as direction
             phimaxRad = deg2rad(phimax);
-            if ~isempty(phimax) && includePhimax %plot long diagonal phimax
-                thetaPhimax = [phimaxRad,phimaxRad+pi];
-                rhoPhimax = [circR,circR];
+            if ~isempty(phimax) && includePhimax %plot phimax
+                if areAxialData
+                    thetaPhimax = [phimaxRad,phimaxRad+pi];
+                    rhoPhimax = [circR,circR];
+                else
+                    thetaPhimax = [phimaxRad,phimaxRad];
+                    rhoPhimax = rlim;
+                end
                 self.phimaxH = polarplot(self.polarAxs,thetaPhimax,rhoPhimax,lineSp...
                     ,'lineWidth',lineWPhimax,'color',colorPhimax,'Tag','phimax');
             end
             if ~isempty(r) && ~isempty(phimax) && includeR
-                rNorm = r * range(rlim) + baseLineOffset; %make vector length relative to plot radius (after shift)
-                thetaR = [phimaxRad,phimaxRad+pi];
-                rohR = [rNorm,rNorm];
-                self.rH = polarplot(self.polarAxs,thetaR,rohR,lineSp,'lineWidth',lineWR,'color',colorR...
-                    ,'Tag','r');
+                % make vector length relative to plot radius (after shift)
+                rNorm = r * range(rlim) + baseLineOffset;
+                if areAxialData
+                    thetaR = [phimaxRad,phimaxRad+pi];
+                    rohR = [rNorm,rNorm];
+                else
+                    thetaR = [phimaxRad,phimaxRad];
+                    rohR = [min(rlim),rNorm];
+                end
+                self.rH = polarplot(self.polarAxs,thetaR,rohR,lineSp...
+                    ,'lineWidth',lineWR,'color',colorR,'Tag','r');
             end
             
             %% edit axes
@@ -429,9 +445,9 @@ classdef CircHist < handle
             self.drawWhiteCirc;
             
             %% title
-            details = sprintf(['N = %u , phimax = %.2f°, r = %.4f\np_{Rayl} = %.3f, ',...
-                'Z_{Rayl} = %.4f, p_{C. an.} = %.3f, R²_{C. an.} = %.3f'],...
-                nSamples,phimax,r,pRayl,zRayl,corrAnP,corrAnR*corrAnR);
+            details = sprintf(['N = %u , phimax = %.2f°, r = %.4f\np_{Rayl} = %.3f, '...
+                ,'Z_{Rayl} = %.4f, p_{C. an.} = %.3f, R²_{C. an.} = %.3f']...
+                ,nSamples,phimax,r,pRayl,zRayl,corrAnP,corrAnR*corrAnR);
             title(details,'FontSize',9)
             
             %%
@@ -661,9 +677,20 @@ classdef CircHist < handle
             % update line data
             self.drawBars
             if isvalid(self.phimaxH)
-                self.phimaxH.RData(:) = limits(2); end
+                if self.areAxialData
+                    self.phimaxH.RData(:) = limits(2);
+                else
+                    self.phimaxH.RData = limits;
+                end
+            end
             if isvalid(self.rH)
-                self.rH.RData(:) = self.r * range(limits) + limits(1); end
+                rNorm = self.r * range(limits) + limits(1);
+                if self.areAxialData
+                    self.rH.RData(:) = rNorm;
+                else
+                    self.rH.RData = [limits(1),rNorm];
+                end                
+            end
             
             % Sometimes, a warning with this identifier is issued for obscure reasons. To
             % suppress this warning, it is converted to an error by calling
