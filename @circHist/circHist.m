@@ -16,6 +16,8 @@ classdef CircHist < handle
     %   Notes and instructions:
     %   * To change the axis limits, use obj.setRLim([lower,upper]).
     %   * To change the scale-label, use obj.scaleBar.Label.String = 'my label'.
+    %   * To add a tilted label to the degree-axis outside of the plot area, use
+    %     obj.thetaLabel('my label',location).
     %   * To change visual properties, either use the name-value pairs for the constructor
     %     as specified below, or access the graphics-objects, namely obj.polarAxs for the
     %     coordinate system (font size, line width, etc.) and obj.scaleBar for the scale
@@ -44,6 +46,15 @@ classdef CircHist < handle
     %       setRLim([lower,upper])      Change axis limits (usage:
     %                                   obj.setRLim([lower,upper])) (get current limits by
     %                                   calling rlim)
+    %       setThetaLabel(txt,location) Adds (or updates) a label saying TXT outside of
+    %                                   the plot at the location specified by LOCATION,
+    %                                   which may be one of the following characters:
+    %                                   'topleft', 'topright', 'bottomleft'(default if
+    %                                   omitted), 'bottomright'. (usage:
+    %                                   obj.setThetaLabel('Direction','bottomright') ).
+    %                                   Specify TXT as a cell array of characters to add
+    %                                   line breaks. Access the created text-object via
+    %                                   obj.thetaLabel.
     %       colorBar                    Change bar color (usage: obj.colorBar = newColor)
     %       barWidth                    Change bar width (usage: obj.barWidth = newWidth)
     %       colorStd                    Change standard-deviation-whisker color (usage as
@@ -86,6 +97,11 @@ classdef CircHist < handle
     %                   DATATYPE is 'distribution' and PSTHTYPE is 'frequency', as well as
     %                   when DATATYPE is 'psth' and PSTHTYPE is 'count'.
     %
+    %   areAxialData    True(default)/false, specifies whether or not input data are
+    %                   axial; else they are considered circular. This is taken into
+    %                   account for statistical computations (axial data are multiplied by
+    %                   2 before calculation).
+    %
     %   includePhimax   'on'(default)/'off', plots average angle.
     %
     %   phimax          Numeric value of the average angle. Should be specified if
@@ -109,14 +125,9 @@ classdef CircHist < handle
     %   adjustSlope     Slope that defines how strong optical properties such as bar width
     %                   scale with bin-size; default = 0.3.
     %
-    %   areAxialData    True(default)/false, specifies whether or not input data are
-    %                   axial; else they are considered circular. This is taken into
-    %                   account for statistical computations (axial data are multiplied by
-    %                   2 before calculation).
-    %
     %   ax              Axes handle to plot diagram into; becomes POLARAXS property. Note
     %                   that the referenced axes must be a 'polaraxes'. (experimental
-    %                   feature, working in principle, but the scale misbehaves).
+    %                   feature, working in principle, but the scale sometimes misbehaves).
     %
     %   colorBar        Color of bars (default = [0 .45 .74]; (Matlab blue)).
     %   colorStd        Color of standard-deviation lines (default = 'k').
@@ -127,8 +138,6 @@ classdef CircHist < handle
     %
     %
     %  ---Author: Frederick Zittrell
-    %   TODO: - Make phimax either an axis or a direction (line from center to
-    %           histogram-edge), based on AREAXIALDATA
     %
     % See also polaraxes polarplot
     properties (SetAccess = immutable)
@@ -159,6 +168,7 @@ classdef CircHist < handle
     properties
         scaleBar        % Handle of scale bar. Use to access visual properties.
         axisLabel       % Label of scale bar as originally set (change the scaleBar.Label.String property to adjust)
+        thetaLabel      % Label of the degree-axis (text-object, constructed via TEXT)
         
         phimaxH         % Handle to the phimax line
         rH              % Handle to the r line
@@ -289,6 +299,10 @@ classdef CircHist < handle
             else
                 self.axisLabel = 'Counts per bin';
             end
+            % initialize theta-label
+            self.thetaLabel = text; % empty
+            
+            %%
             % deduce histogram data from edges
             binSizeDeg = abs(edges(1) - edges(2));
             binCentersDeg = edges(1:end-1) + binSizeDeg/2;
@@ -358,7 +372,7 @@ classdef CircHist < handle
             
             % self-reference in property for hyper-redundancy (this is actually quite
             % handy if you want to retrieve the circHist-object from a figure)
-            self.polarAxs.UserData = self;
+            self.polarAxs.UserData.circHistObj = self;
             
             polarAxs = self.polarAxs;
             polarAxs.ThetaZeroLocation = 'top';
@@ -466,6 +480,8 @@ classdef CircHist < handle
 
             currFig.Visible = 'on';
         end
+        %%
+        %%
         %% drawBars
         function drawBars(self)
             % Draws the bars. Needs to be done each time the r-axis limits change because
@@ -530,8 +546,12 @@ classdef CircHist < handle
             end
             self.barH = findobj(self.polarAxs,'Tag','histBar');
             self.stdH = findobj(self.polarAxs,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
-            uistack(self.phimaxH,'top');
-            uistack(self.rH,'top');
+            if ~isempty(self.phimaxH) && isvalid(self.phimaxH)
+                uistack(self.phimaxH,'top');
+            end
+            if ~isempty(self.rH) && isvalid(self.rH)
+                uistack(self.rH,'top');
+            end
         end
         %% drawBaseLine
         function drawBaseLine(self)
@@ -562,19 +582,22 @@ classdef CircHist < handle
             %drawn each time the figure size is changed. The scale bar is actually a
             %colorbar-object, thus it does not behave as neat as a conventional axis.
             
-%             self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
+            self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
             pAx = self.polarAxs;
             scl = self.scaleBar;
             
             %default font size. This line should be completely useless, but for some
-            %reason, there are strange effects without it.
-            fontsz = 13;
+            %reason, there are strange effects without it. The fact that the bar-drawing
+            %is executed via SIZECHANGEDFCN seems to interrupt the link between the font
+            %properties of the bar and the font properties of the parent axes, leading to
+            %strang effects.
+            fontsz = 13; %#ok
 
             initialDraw = isempty(scl);
             if initialDraw % if the bar is drawn for the first time, use predefined label and font size
                 label = self.axisLabel;
                 fontsz = self.fontSize;
-            else % read out (assumingly predefined properties) and use these for the next drawing
+            else % read out (assumingly predefined) properties and use these for the next drawing
                 label = scl.Label.String;
                 fontsz = scl.Label.FontSize;
                 oldLineWidth = scl.LineWidth;
@@ -585,13 +608,18 @@ classdef CircHist < handle
             scl = colorbar('Location','manual');
             self.scaleBar = scl; % re-assign
             
+            % with this link, the label font-name is changed with the corresponding
+            % axes-property using set(gca,'FontName',fontName), which is the default
+            % behavior of colorbar labels.
+            pAx.UserData.fontNameLink =  linkprop([pAx,scl],'FontName');
+            
             sclUnitsOld = scl.Units;
             scl.Units = 'pixels';
             polarAxsUnitsOld = pAx.Units;
             pAx.Units = 'pixels';
             
-            scl.Position(1) = pAx.Position(1);
             polarPos = pAx.Position; %position property = [left,bottom,width,height]
+            scl.Position(1) = polarPos(1);
             polarBot = polarPos(2);
             polarHeight = polarPos(4);
             
@@ -606,10 +634,8 @@ classdef CircHist < handle
             sclBot = polarBot + polarHeight - sclHeight; %calculate baseline position
             scl.Position = [pAx.Position(1),sclBot,sclWidth,sclHeight];
             %move scale left if it overlays the polar-axis label (hard-coded, empirical values, sadly)
-            if offset < 15
-                moveLeft = 15;
-            else
-                moveLeft = 0;
+            if offset < 15, moveLeft = 15;
+            else,           moveLeft =  0;
             end
             scl.Position(1) = pAx.Position(1) - moveLeft; %move
             
@@ -630,14 +656,12 @@ classdef CircHist < handle
             if ~initialDraw
                 scl.LineWidth = oldLineWidth;
             end
-%             self.figH.Visible = 'on';
+            self.figH.Visible = 'on';
         end
         %% draw white circle in the middle to obscure the axis-lines
         function drawWhiteCirc(self)
-                        
-            if ~isempty(self.whiteCircH)
-                delete(self.whiteCircH); end
-                        
+            if ~isempty(self.whiteCircH), delete(self.whiteCircH); end
+            
             baseLineOffset = rlim;
             baseLineOffset = baseLineOffset(1);
             if baseLineOffset >= 0, return, end
@@ -696,15 +720,69 @@ classdef CircHist < handle
             % suppress this warning, it is converted to an error by calling
             % warning('error',_). This error can then be caught and ignored.
             wrn = warning('error','MATLAB:callback:error'); %#ok<CTPCT>
-            try   self.drawScale; %update scale
+            try   self.drawScale; % update scale
             catch ME
                 if ~strcmp(ME.identifier,wrn.identifier)
-                    rethrow(ME);end % re-throw error if it is not this error
+                    rethrow(ME); end % re-throw error if it is not this error
             end
             warning(wrn); % set error back to being a warning
             
             self.drawBaseLine
             self.drawWhiteCirc; % adjust background
+        end
+        %% set theta-axis label
+        function setThetaLabel(self,txt,location)
+            %setThetaLabel Add (or update) a label to the theta-axis, label-text specified by TXT, location specified by LOCATION, which may be 'bottomleft'(default if omitted), 'bottomright', 'topleft' or 'topright'.
+            %
+            % circHistObj.setThetaLabel('My label','topright');
+            %
+            
+            assert(ischar(txt) || isstring(txt) || iscellstr(txt) ...
+                || all(cellfun(@isstring,txt))...
+                ,'TXT input must be a CHAR, STRING or cell array of CHARS or STRINGS.');
+            
+            locations = {'bottomleft','bottomright','topleft','topright'};
+            if nargin < 3, location = locations{1};
+            else,          location = lower(location);
+                assert(any(strcmp(location,locations)) ...
+                    ,['LOCATION input must be one of the following: ' ...
+                    ,strjoin(locations,',')]);
+            end
+            
+            % based on THETADIR and THETAZEROLOCATION, the label-theta angle needs to be adjusted so the label is in die specified corner
+            if strcmp(self.polarAxs.ThetaDir,'counterclockwise')
+                  thetaDirSign = +1;
+            else, thetaDirSign = -1;
+            end
+            
+            switch self.polarAxs.ThetaZeroLocation
+                case 'top',     thOffsetZero =   0;
+                case 'right',   thOffsetZero =  90;
+                case 'bottom',  thOffsetZero = 180;
+                case 'left',    thOffsetZero = 270;
+            end
+            thOffsetZero = thOffsetZero * thetaDirSign;
+            
+            switch location
+                case 'topleft',     thOffsetLoc =   0; txtRot =  45;
+                case 'bottomleft',  thOffsetLoc =  90; txtRot = -45;
+                case 'bottomright', thOffsetLoc = 180; txtRot =  45;
+                case 'topright',    thOffsetLoc = 270; txtRot = -45;
+            end
+            thOffsetLoc = thOffsetLoc * thetaDirSign;
+            
+            th = 45 * thetaDirSign + thOffsetLoc + thOffsetZero;
+            
+            rlims = self.polarAxs.RLim;
+            delete(self.thetaLabel);
+            self.thetaLabel = text(deg2rad(th),rlims(2) + range(rlims)*0.2,txt ...
+                ,'HorizontalAlignment','center','VerticalAlignment','cap' ...
+                ,'Rotation',txtRot,'FontSize',self.fontSize);
+            % make label-color be linked to theta-axis color (default behavior for labels)
+            % for some reason, the link only works when THETALABEL.COLOR is changed, not
+            % the other way around ...
+            self.polarAxs.UserData.thetaLabelColorLink = ...
+                linkprop([self.polarAxs.ThetaAxis,self.thetaLabel],'Color');
         end
         %% change bar color
         function set.colorBar(self,color)
@@ -722,6 +800,8 @@ classdef CircHist < handle
             % Note to self: The color- and width-changing functions could also be
             % implemented by linking the respective property of all objects using linkprop
             % and then only changing the property of one.
+            %
+            %   circHistObj.colorStd([.5,.5,.5]);
             self.colorStd = color;
             set(self.stdH,'color',color);
         end
@@ -730,16 +810,17 @@ classdef CircHist < handle
             % Since each whisker consists of two line-objects with different widths (the
             % "main" line and the ending), the width of the ending is scaled
             % proportionally to the width-change of the "main" line.
+            %
+            %   circHistObj.stdWidth(2);
             
             oldWidth = self.stdWidth;
             self.stdWidth = width;
             
             %happens at object construction; this is NOT elegant and I am sorry
-            if isempty(oldWidth) 
-                return; end
+            if isempty(oldWidth), return; end
             
             scalingFactor = width / oldWidth;
-                        
+            
             %get handles of different line objects
             maskLines = strcmp({self.stdH.Tag},'stdWhisk');
             stdMain = self.stdH(maskLines);
@@ -753,16 +834,20 @@ classdef CircHist < handle
         end
         %% save to pdf
         function toPdf(self,fileName)
-            %toPdf  Save histogram as (fileName).pdf.
+            %toPdf  Save histogram as (FILENAME).pdf.
             %
             %   circHistObj.toPdf(fileName);
             
-            print(self.figH,fileName,'-dpdf','-fillpage','-painters')
+            if exist('toPdf','file') % call custom function if available
+                toPdf(self.figH,fileName);
+            else
+                print(self.figH,fileName,'-dpdf','-fillpage','-painters');
+            end
         end
         %% save to png
         function toPng(self,fileName,resol)
-            %toPng Save histogram as (filename).png at the optionally specified resolution
-            %(default = 90 dpi). Specify resol as a string of the pattern '-r90'.
+            %toPng Save histogram as (FILENAME).png at the optionally specified resolution
+            %(default = 90 dpi). Specify RESOL as a string of the pattern '-r90'.
             %
             %   obj.toPng(filename);
             %   obj.toPng(filename,resol);
@@ -770,17 +855,24 @@ classdef CircHist < handle
             if nargin < 3
                 resol = '-r90';
             end
-            print(self.figH,fileName,'-dpng','-opengl',resol);           
+            
+            if exist('toPng','file') % call custom function if available
+                toPng(self.figH,fileName,resol);
+            else
+                print(self.figH,fileName,'-dpng','-opengl',resol);
+            end
         end
         %% drawCirc
         function hOut = drawCirc(self,rho,varargin)
             %drawCirc Draws a circle in the plot, radius specified by RHO, appearance
-            %optionally specified by LINESPEC; optionally returns the graphics-object
-            %handle.
+            %optionally specified by additional parameters which must be Name-Value pairs
+            %as accepted by POLARPLOT. Optionally returns the graphics-object handle.
             %
             %   obj.drawCirc(rho);
-            %   obj.drawCirc(rho,lineSpec);
+            %   obj.drawCirc(rho,Name,Value);
             %   h = obj.drawCirc(___);
+            %
+            % See also polarplot
             
             assert(isnumeric(rho) && isscalar(rho) ...
                 ,'First input RHO must be a numerical scalar.');
