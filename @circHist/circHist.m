@@ -184,7 +184,7 @@ classdef CircHist < handle
     % See also polaraxes polarplot CircStat
     properties (SetAccess = immutable)
         data            % Required input: Data.
-        edges           % Required input: Histogram edges;
+        edges           % Required input: Histogram-bin edges or number of histogram-bins
                 
         dataType        % Optional input; 'distribution'(default)/'histogram'
         histType        % Optional input; 'frequency'(default)/'count'
@@ -549,7 +549,9 @@ classdef CircHist < handle
             self.polarAxs.UserData.avgAngCiWhiskOffset = avgAngCiWhiskOffset;
 
             avgAngCiRad = deg2rad(avgAngCi);
-            if ~isempty(avgAngCi) && drawAvgAngCi
+            % ISNAN(AVGANGCI) == TRUE if the requirements for confidence levels are not
+            % met, see CIRC_CONFMEAN line 70 -> do not plot
+            if ~isempty(avgAngCi) && ~isnan(avgAngCi) && drawAvgAngCi
                 self.avgAngCiH = gobjects(0);
                 avgAngCiPlotArgs = {'lineStyle',lineSp,'color',colorAvgAngCi ...
                     ,'Clipping','off'};
