@@ -8,7 +8,9 @@ classdef CircHist < handle
     % created object. Input data may be either angular distributions or already-binned
     % data.
     %
-    %   Requirements: CircStat toolbox (mathworks.com/matlabcentral/fileexchange/10676)
+    %   Requirements: CircStat toolbox by Philipp Berens & Marc J. Velasco
+    %                 (http://www.jstatsoft.org/v31/i10 or
+    %                 mathworks.com/matlabcentral/fileexchange/10676)
     %
     %   Usage:  CircHist(data,edges);
     %           CircHist(data,nBins);
@@ -16,7 +18,7 @@ classdef CircHist < handle
     %           CircHist(data,nBins,Name,Value);
     %           obj = CircHist(___);
     %
-    %   Notes and instructions:
+    %   ---Notes and instructions:
     %   * To change the radius-axis limits, use obj.setRLim([lower,upper]); to change the
     %     angle-axis limits, use obj.thetaLim = [lower,upper].
     %   * To change the scale-label, use obj.axisLabel = 'my label'.
@@ -48,15 +50,15 @@ classdef CircHist < handle
     %   * Consider creating a new figure for each histogram because there may be
     %     side-effects regarding the axis and the scale bar if the same axes-object or
     %     figure-window are used.
-    %   * If you want the angle-axis units to be in radians, first change the
+    %   * If you want the angle-axis unit to be radians, first change the
     %     POLARAXES.THETAAXIS.TICKLABELSMODE property to 'auto', then change
-    %     THETAAXISUNITS to 'radians'.
+    %     POLARAXES.THETAAXISUNITS to 'radians'.
     %   * The axis-grid-lines in the center of the plot are obscured by white bars for
     %     cosmetic reasons. To access the bars, e.g. to change their color, refer to
     %     obj.whiteDiskH.
     %
     %
-    %   Methods and noteworthy properties:
+    %   ---Methods and noteworthy properties:
     %       setRLim([lower,upper])      Change axis limits (usage:
     %                                   obj.setRLim([lower,upper])) (get current limits by
     %                                   calling rlim)
@@ -87,6 +89,25 @@ classdef CircHist < handle
     %                                   the graphics object. Example usage:
     %                                   h = obj.drawCirc(15,'-g','LineWidth',4)
     %
+    %   ---Example:
+    %       s = rad2deg(circ_vmrnd(pi/2,2,100)); % generate noisy sample, convert to deg
+    %       nBins = 36; % number of bins, makes bin size of 10°
+    %       cObj = CircHist(s,nBins); % plot circular histogram
+    %       cObj.colorBar = 'k'; % change appearance
+    %       cObj.colorR = 'r';
+    %       cObj.avgAngH.LineStyle = '--';
+    %       % remove offset between bars and plot-center
+    %       rl = rlim;
+    %       cObj.setRLim([0,rl(2)]);
+    %       % draw circle at r == 0.5
+    %       rl = rlim;
+    %       cObj.drawCirc((rl(2)-rl(1))/2,'--b')
+    %       %% plot multi-sample distribution
+    %       % generate another noisy sample with the same distribution parameters
+    %       s2 = rad2deg(circ_vmrnd(pi/2,2,100));
+    %       figure, cObj = CircHist({s,s2},nBins);
+    %
+    %
     %   ---Required input:
     %   data            Either one vector of angle samples (distribution) in degree (!), a
     %                   cell array of such samples, or a two-column matrix of N length
@@ -97,7 +118,7 @@ classdef CircHist < handle
     %                   property accordingly.
     %   edges           Edges of histogram, either specified by a vector of degree-values,
     %                   e.g. [0:20:360] for 20° bins, or by a scalar integer specifying
-    %                   the number of bins in a full circle.
+    %                   the number of bins between 0° and 360°.
     %
     %   ---Optional Name-Value pair input:
     %   dataType        'distribution'(default)/'histogram'. Type of input data:
@@ -182,6 +203,18 @@ classdef CircHist < handle
     %  ---Author: Frederick Zittrell
     %
     % See also polaraxes polarplot CircStat
+    
+    % To do: Add functionality to plot several distributions in one diagram. Things to
+    % consider:
+    % - different colors (for bars and for avg.-angle line)
+    % - statistics in title
+    % - input data: for distribution-data, nest individual distributions in cell arrays
+    %   where each element is another cell-array that contains the distribution data, so
+    %   data{1}{1} would be the first sample of the first distribution, data{1}{2} the
+    %   second, and data{2}{1} the first sample of the second distribution etc. - this
+    %   would be rather painful. Better ideas?
+    % - implement CircHist.addDistribution
+    % - (update example)
     properties (SetAccess = immutable)
         data            % Required input: Data.
         edges           % Required input: Histogram-bin edges or number of histogram-bins
@@ -241,10 +274,12 @@ classdef CircHist < handle
             %CircHist constructor
             %       obj = CircHist(data,edges,Name,Value)
             
+            %% empty-object case
+            if nargin == 0, return; end
+            
             %% validate and parse input
             validateattributes(data,{'numeric','cell'},{'nonempty'});
             validateattributes(edges,{'numeric'},{'vector'});
-            self.data  = data;
             if isscalar(edges)
                 edges = 0 : (360/edges) : 360; end
             self.edges = edges;
@@ -361,6 +396,18 @@ classdef CircHist < handle
             if isempty(binSizeSec) && isFrequency
                 error('To obtain frequency-data (counts per second), specify BINSIZESEC.');
             end
+            %% validate that input data match DATATYPE
+            if areDistribData
+                assert(isvector(data) || all(cellfun(@(c)isvector(c) && isnumeric(c),data))...
+                    ,['For distribution-data, input variable must be either a cell' ...
+                    ,' array of samples or a single vector of samples.']);
+            else, assert(isvector(data) || size(data,2) <= 2 ...
+                    ,['For histogram-data, input variable must be either a vector of' ...
+                    ,' bin-values (counts or frequencies) or a N-by-2 matrix  where N' ...
+                    ,' is the number of bins, the first column contains the bin-values' ...
+                    ,' and the second column contains the standard deviation of the' ...
+                    ,' respective bin.']);
+            end
             %%
             % deduce bin data from edges
             binSizeDeg = abs(edges(1) - edges(2));
@@ -379,6 +426,9 @@ classdef CircHist < handle
                     validateattributes(data,{'numeric'},{'vector'});
                     data = {data(:)};
                 end
+                % transform angles to be in [0,360], necessary for correct binning
+                data = cellfun(@(c)mod(c,360),data,'UniformOutput',false);
+                self.data = data;
                 
                 nSamples = numel(data);
                 binnedData = nan(numel(edges)-1,nSamples);
@@ -420,6 +470,7 @@ classdef CircHist < handle
                 zRayl = self.rayleighZ;
             else % histogram data
                 nSamples = NaN; %not feasible
+                self.data = data;
                 if isvector(data) %if it is a vector, use zeros for standard deviation
                     histData = data(:); %columnize
                     histData(:,2) = 0;
@@ -468,6 +519,7 @@ classdef CircHist < handle
             if ~isempty(ax) && isvalid(ax), figH = ax.Parent;
             else,                           figH = gcf; end
             
+            figVisibleState = figH.Visible;
             figH.Visible = 'off';
             self.figH = figH;
             set(0,'currentfigure',figH);
@@ -500,7 +552,7 @@ classdef CircHist < handle
             %% draw bars and whiskers
             self.drawBars
             %%
-            circR = max(rlim); %radius of plot in data units
+            circR = max(rlim(polarAxs)); %radius of plot in data units
             
             %calculate baseline shift from center; depends on bin size for aesthetic reasons
             if ~isnan(baseLineOffset)
@@ -518,6 +570,7 @@ classdef CircHist < handle
             %% average angle and r
             % based on AREAXIALDATA, the average-angle and r lines are axes in the
             % histogram, or lines with the average angle as direction
+            rL = rlim(polarAxs);
             avgAngRad = deg2rad(avgAng);
             if ~isempty(avgAng) && drawAvgAng %plot average angle
                 if areAxialData
@@ -525,20 +578,20 @@ classdef CircHist < handle
                     rhoAvgAng = [circR,circR];
                 else
                     thetaAvgAng = [avgAngRad,avgAngRad];
-                    rhoAvgAng = rlim;
+                    rhoAvgAng = rL;
                 end
                 self.avgAngH = polarplot(self.polarAxs,thetaAvgAng,rhoAvgAng,lineSp...
                     ,'lineWidth',lineWAvgAng,'color',colorAvgAng,'Tag','avgAng');
             end
             if ~isempty(r) && ~isempty(avgAng) && drawR
                 % make vector length relative to plot radius (after shift)
-                rNorm = r * range(rlim) + baseLineOffset;
+                rNorm = r * range(rL) + baseLineOffset;
                 if areAxialData
                     thetaR = [avgAngRad,avgAngRad+pi];
                     rohR = [rNorm,rNorm];
                 else
                     thetaR = [avgAngRad,avgAngRad];
-                    rohR = [min(rlim),rNorm];
+                    rohR = [min(rL),rNorm];
                 end
                 self.rH = polarplot(self.polarAxs,thetaR,rohR,lineSp...
                     ,'lineWidth',lineWR,'color',colorR,'Tag','r');
@@ -547,6 +600,7 @@ classdef CircHist < handle
             % distance between confidence-interval line and plot border in percent
             avgAngCiWhiskOffset = 0.02;
             self.polarAxs.UserData.avgAngCiWhiskOffset = avgAngCiWhiskOffset;
+            avgAngCiLW = 2; % line width
 
             avgAngCiRad = deg2rad(avgAngCi);
             % ISNAN(AVGANGCI) == TRUE if the requirements for confidence levels are not
@@ -561,14 +615,14 @@ classdef CircHist < handle
                 thetaAvgAngCi = linspace( ...
                     avgAngRad - avgAngCiRad,avgAngRad + avgAngCiRad,thetaStepN);
                 
-                rhoAvgAngCi = max(rlim) + avgAngCiWhiskOffset * range(rlim);
-                avgAngCiWhiskLen = avgAngCiWhiskOffset*2/3 * range(rlim);
+                rhoAvgAngCi = max(rL) + avgAngCiWhiskOffset * range(rL);
+                avgAngCiWhiskLen = avgAngCiWhiskOffset*2/3 * range(rL);
                 rhoAvgAngCiWhiskEnd = ...
                     [rhoAvgAngCi + avgAngCiWhiskLen, rhoAvgAngCi - avgAngCiWhiskLen];
                 rhoAvgAngCi = repmat(rhoAvgAngCi,thetaStepN,1);
                 
                 self.avgAngCiH(1,1) = polarplot(thetaAvgAngCi,rhoAvgAngCi,avgAngCiPlotArgs{:} ...
-                    ,'lineWidth',self.stdWidth,'Tag','avgAngCiWhisk');
+                    ,'lineWidth',avgAngCiLW,'Tag','avgAngCiWhisk');
                 self.avgAngCiH(1,2) = polarplot([thetaAvgAngCi(1),thetaAvgAngCi(1)] ...
                     ,rhoAvgAngCiWhiskEnd,avgAngCiPlotArgs{:} ...
                     ,'lineWidth',whiskWidthEnd,'Tag','avgAngCiWhiskEnd');
@@ -579,7 +633,7 @@ classdef CircHist < handle
                 if areAxialData % plot again with mirrored angles
                     thetaAvgAngCi = thetaAvgAngCi + pi;
                     self.avgAngCiH(2,1) = polarplot(thetaAvgAngCi,rhoAvgAngCi ...
-                        ,'lineWidth',self.stdWidth,avgAngCiPlotArgs{:},'Tag','avgAngCiWhisk');
+                        ,'lineWidth',avgAngCiLW,avgAngCiPlotArgs{:},'Tag','avgAngCiWhisk');
                     self.avgAngCiH(2,2) = polarplot([thetaAvgAngCi(1),thetaAvgAngCi(1)] ...
                         ,rhoAvgAngCiWhiskEnd,avgAngCiPlotArgs{:} ...
                         ,'lineWidth',whiskWidthEnd,'Tag','avgAngCiWhiskEnd');
@@ -632,8 +686,14 @@ classdef CircHist < handle
             end
             
             self.drawScale;
-            figH.SizeChangedFcn = {@self.redrawScale,self};
-            figH.Visible = 'on';
+%             figH.SizeChangedFcn = {@self.redrawScale,self};
+            figH.SizeChangedFcn = @self.redrawScale;
+            % automatically DELETE object if the polaraxes is deleted
+            polarAxs.DeleteFcn = @(~,~) delete(self);
+            
+            % this preserves the visiblity-state if the histogram is plotted into an
+            % existing axes in an invisible figure.
+            figH.Visible = figVisibleState;
         end
         %%
         %%
@@ -737,10 +797,14 @@ classdef CircHist < handle
             %drawn each time the figure size is changed. The scale bar is actually a
             %colorbar-object, thus it does not behave as neat as a conventional axis.
             
+            scl = self.scaleBar;
+            % non-empty and non-valid if the scale bar has been deleted
+            if ~isempty(scl) && ~isvalid(scl), return; end
+            
+            figVisibleState = self.figH.Visible;
             self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
             pAx = self.polarAxs;
-            scl = self.scaleBar;
-            
+                        
             sclLeft = strcmp(self.scaleBarSide,'left');
 
             %default font size. This line should be completely useless, but for some
@@ -850,7 +914,8 @@ classdef CircHist < handle
             if ~initialDraw
                 scl.LineWidth = oldLineWidth;
             end
-            self.figH.Visible = 'on';
+            % restore initial state of visibility
+            self.figH.Visible = figVisibleState;
         end
         %% draw white disk in the middle to obscure the axis-lines
         function drawWhiteDisk(self)
@@ -880,27 +945,35 @@ classdef CircHist < handle
             %
             % circHistObj.setRLim(limits); where LIMITS == [lower,upper]
             %
-            rlim(limits); %change limits
+            rlim(self.polarAxs,limits); %change limits
             
             % update line data
             self.drawBars
-            if isvalid(self.avgAngH)
+            if ~isempty(self.avgAngH) && isvalid(self.avgAngH)
                 if self.areAxialData, self.avgAngH.RData(:) = limits(2);
                 else,                 self.avgAngH.RData = limits;       end
             end
-            if isvalid(self.rH)
+            if ~isempty(self.rH) && isvalid(self.rH)
                 rNorm = self.r * range(limits) + limits(1);
                 if self.areAxialData, self.rH.RData(:) = rNorm;
                 else,                 self.rH.RData = [limits(1),rNorm]; end
             end
-            if all(isvalid(self.avgAngCiH))
-                oldRho = self.avgAngCiH(1,1).RData(1);
+            if ~isempty(self.avgAngCiH) && all(isvalid(self.avgAngCiH))
+                oldRho = self.avgAngCiH(1,1).RData(1); % update CI circle-segment
                 newRho = limits(2) + self.polarAxs.UserData.avgAngCiWhiskOffset * range(limits);
                 avgAngCiRhoOffset = newRho - oldRho;
-                arrayfun(@(h)set(h,'RData',h.RData + avgAngCiRhoOffset),self.avgAngCiH);
+                whiskH = findobj(self.polarAxs,'Tag','avgAngCiWhisk');
+                arrayfun(@(h)set(h,'RData',h.RData + avgAngCiRhoOffset),whiskH);
+                
+                avgAngCiWhiskLen = ... % update whisker-endings
+                    self.polarAxs.UserData.avgAngCiWhiskOffset*2/3 * range(limits);
+                newRhoAvgAngCiWhiskEnd = ...
+                    [newRho + avgAngCiWhiskLen, newRho - avgAngCiWhiskLen];
+                set(findobj(self.polarAxs,'Tag','avgAngCiWhiskEnd') ...
+                    ,'RData',newRhoAvgAngCiWhiskEnd); % RDATA common for all whisker-ends
             end
             
-            if isvalid(self.thetaLabel)
+            if ~isempty(self.thetaLabel) && isvalid(self.thetaLabel)
                 self.setThetaLabel(self.thetaLabel.String ...
                     ,self.thetaLabel.UserData.location);
             end
@@ -976,8 +1049,8 @@ classdef CircHist < handle
             
             rlims = self.polarAxs.RLim;
             delete(self.thetaLabel);
-            self.thetaLabel = text(deg2rad(th),rlims(2) + range(rlims)*0.2,txt ...
-                ,'HorizontalAlignment','center','VerticalAlignment','cap' ...
+            self.thetaLabel = text(self.polarAxs,deg2rad(th),rlims(2) + range(rlims)*0.2 ...
+                ,txt,'HorizontalAlignment','center','VerticalAlignment','cap' ...
                 ,'Rotation',txtRot,'FontSize',self.fontSize);
             self.thetaLabel.UserData.location = location;
             % make label-color be linked to theta-axis color (default behavior for labels)
@@ -1022,6 +1095,16 @@ classdef CircHist < handle
             self.colorBar = color;
             lineObjArr = findobj(self.polarAxs,'Tag','histBar','-or','Tag','baseLine');
             set(lineObjArr,'color',color);
+        end
+        %% change R-line color
+        function set.colorR(self,color)
+            self.colorR = color;
+            set(self.rH,'Color',color);
+        end
+        %% change average-angle line color
+        function set.colorAvgAng(self,color)
+            self.colorAvgAng = color;
+            set(self.avgAngH,'Color',color);
         end
         %% change bar width
         function set.barWidth(self,width)
@@ -1119,9 +1202,17 @@ classdef CircHist < handle
     end
     methods (Static)
         %%
-        function redrawScale(~,~,circHistObj)
-           set(0,'currentfigure',gcbf);
-           circHistObj.drawScale;
-       end
+%         function redrawScale(~,~,circHistObj)
+%            set(0,'currentfigure',gcbf);
+%            circHistObj.drawScale;
+%         end
+        function redrawScale(~,~)
+            fH = gcbf;
+            set(0,'currentfigure',fH);
+            % get all CIRCHIST-objects in this figure via the polaraxes' USERDATA entry
+            pAxH = findobj(fH,'-function',@(o)isfield(o.UserData,'circHistObj'));
+            if ~isempty(pAxH) % loop through objects, call DRAWSCALE
+                arrayfun(@(ax)ax.UserData.circHistObj.drawScale,pAxH); end
+        end
     end
 end
