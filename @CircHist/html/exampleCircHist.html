@@ -1,0 +1,245 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2018-06-15"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Using the CircHist Class</h1><!--introduction--><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Plot Distribution Data</a></li><li><a href="#4">Plot Multi-Sample Distribution</a></li><li><a href="#5">Combine Multiple Histograms in One Figure</a></li><li><a href="#6">Plot Already-Binned Data</a></li><li><a href="#7">Axial Data</a></li><li><a href="#10">Draw Arrows</a></li><li><a href="#13">Enable Tab Auto-Completion for Object Construction</a></li></ul></div><h2 id="1">Plot Distribution Data</h2><p>Generate a noisy sample (von Mises distribution with <tt>theta</tt> == 90 deg).</p><pre class="codeinput">rng <span class="string">default</span>
+sDist = rad2deg(circ_vmrnd(pi/2,2,100)); <span class="comment">% generate sample, convert to deg</span>
+nBins = 36; <span class="comment">% number of bins, makes bin size of 10 deg</span>
+</pre><p>Plot the circular histogram:</p><pre class="codeinput">obj1 = CircHist(sDist,nBins);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_01.png" alt=""> <p>Adjust appearance:</p><pre class="codeinput">obj1.colorBar = <span class="string">'k'</span>;
+obj1.avgAngH.LineStyle = <span class="string">'--'</span>;
+obj1.avgAngH.LineWidth = 1;
+obj1.colorAvgAng = [.5 .5 .5];
+<span class="comment">% remove offset between bars and plot-center</span>
+rl = rlim;
+obj1.setRLim([0,rl(2)]);
+<span class="comment">% draw circle at r == 0.5 (where r == 1 would be the outer plot edge)</span>
+rl = rlim;
+obj1.drawCirc((rl(2)-rl(1))/2,<span class="string">'--b'</span>,<span class="string">'LineWidth'</span>,2)
+obj1.scaleBarSide = <span class="string">'right'</span>;
+obj1.polarAxs.ThetaZeroLocation = <span class="string">'right'</span>;
+obj1.setThetaLabel(<span class="string">'Direction'</span>,<span class="string">'bottomleft'</span>);
+<span class="comment">% draw resultant vector r as arrow</span>
+delete(obj1.rH)
+obj1.drawArrow(obj1.avgAng,obj1.r * range(rl),<span class="string">'HeadWidth'</span>,10,<span class="string">'LineWidth'</span>,2,<span class="string">'Color'</span>,<span class="string">'r'</span>)
+<span class="comment">% Change theta- and rho-axis ticks</span>
+obj1.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(0:90:360);
+rticks(0:4:20);
+obj1.drawScale; <span class="comment">% update scale bar</span>
+</pre><img vspace="5" hspace="5" src="exampleCircHist_02.png" alt=""> <h2 id="4">Plot Multi-Sample Distribution</h2><p>Generate another noisy sample with a different distribution-width <tt>kappa</tt>.</p><pre class="codeinput">rng <span class="string">default</span>
+s2Dist = rad2deg(circ_vmrnd(pi/2,1.5,100));
+sCell = {sDist,s2Dist}; <span class="comment">% pack both samples into a cell-array</span>
+figure
+CircHist(sCell,nBins);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_03.png" alt=""> <h2 id="5">Combine Multiple Histograms in One Figure</h2><p>Create subplot, note that the created <tt>axes</tt> must be a <tt>polaraxes</tt>.</p><pre class="codeinput">fH = figure;
+subAx1 = subplot(1,2,1,polaraxes);
+subAx2 = subplot(1,2,2,polaraxes);
+obj2 = CircHist(sDist,nBins,<span class="string">'ax'</span>,subAx1);
+obj3 = CircHist(s2Dist,nBins,<span class="string">'ax'</span>,subAx2);
+<span class="comment">% Make rho-axes equal for both diagrams</span>
+maxRho = max([max(rlim(subAx1)),max(rlim(subAx2))]);
+newLimits = [min(rlim(subAx1)),maxRho];
+obj2.setRLim(newLimits);
+obj3.setRLim(newLimits);
+<span class="comment">% Adjust figure-window size</span>
+drawnow
+fH.Position(3) = 1100; <span class="comment">% width</span>
+fH.Position(4) = 500; <span class="comment">% height</span>
+</pre><img vspace="5" hspace="5" src="exampleCircHist_04.png" alt=""> <h2 id="6">Plot Already-Binned Data</h2><p>Bin the generated multi-sample distribution before plotting.</p><pre class="codeinput">edges = 0:10:360;
+histData = histcounts(mod([sDist;s2Dist],360),edges);
+<span class="comment">% Note that |edges| can be omitted because the number of bins results from the number of</span>
+<span class="comment">% data points in |histData|, but that |'dataType'| must be specified as |'histogram'|.</span>
+figure
+CircHist(histData,<span class="string">'dataType'</span>,<span class="string">'histogram'</span>);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_05.png" alt=""> <h2 id="7">Axial Data</h2><p>Copy the von Mises data with an offset of 180 deg to generate an axial, bimodal distribution.</p><pre class="codeinput">sAxial = [sDist;sDist+180];
+</pre><p>Call <tt>CircHist</tt> with <tt>'areAxialData'</tt> specified as <tt>true</tt>.</p><pre class="codeinput">figure
+CircHist(sAxial,nBins,<span class="string">'areAxialData'</span>,true);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_06.png" alt=""> <p>Note that now the average angle is indicated by an axis that halves the diagram at this angle.</p><h2 id="10">Draw Arrows</h2><pre class="codeinput">rng <span class="string">default</span>
+arrowLen = randn(numel(sDist),1); <span class="comment">% random arrow lengths</span>
+arrowLen = arrowLen / max(arrowLen);
+arrowLen = arrowLen + abs(min(arrowLen));
+figure
+obj4 = CircHist([1,2],36); <span class="comment">% dummy data</span>
+delete([obj4.avgAngH;obj4.avgAngCiH(:);obj4.barH(:);obj4.rH]); <span class="comment">% remove dummy data</span>
+title(<span class="string">''</span>);
+obj4.scaleBar.Label.String = <span class="string">'Vector length'</span>;
+obj4.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(0:90:360);
+arrowH = obj4.drawArrow(sDist,arrowLen);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_07.png" alt=""> <p>Change visual properties and add another arrow.</p><pre class="codeinput">set(arrowH,<span class="string">'HeadStyle'</span>,<span class="string">'plain'</span>,<span class="string">'HeadWidth'</span>,3)
+<span class="comment">% Draw a single arrow that ends at the outer plot edge</span>
+avgAng = circ_mean(deg2rad(sDist),arrowLen); <span class="comment">% average angle, weighted by arrow length</span>
+obj4.drawArrow(rad2deg(avgAng),[],<span class="string">'Color'</span>,<span class="string">'r'</span>,<span class="string">'LineWidth'</span>,3)
+</pre><img vspace="5" hspace="5" src="exampleCircHist_08.png" alt=""> <pre class="codeinput">drawnow <span class="comment">% (else, the last figure is not shown in the published version for some reason)</span>
+</pre><h2 id="13">Enable Tab Auto-Completion for Object Construction</h2><p>If <tt>functionSignatures.json</tt> is located in the same directory as the <tt>@CircHist</tt> folder, Name-Value pairs of the object-constructor call can be auto-completed as it is the case for builtin MATLAB functions. See also: <a href="https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html">https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html</a></p><p><img vspace="5" hspace="5" src="tab-auto.png" alt=""> </p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Using the CircHist Class
+%% Plot Distribution Data
+% Generate a noisy sample (von Mises distribution with |theta| == 90 deg).
+rng default
+sDist = rad2deg(circ_vmrnd(pi/2,2,100)); % generate sample, convert to deg
+nBins = 36; % number of bins, makes bin size of 10 deg
+%%
+% Plot the circular histogram:
+obj1 = CircHist(sDist,nBins);
+%%
+% Adjust appearance:
+obj1.colorBar = 'k'; 
+obj1.avgAngH.LineStyle = 'REPLACE_WITH_DASH_DASH';
+obj1.avgAngH.LineWidth = 1;
+obj1.colorAvgAng = [.5 .5 .5];
+% remove offset between bars and plot-center
+rl = rlim;
+obj1.setRLim([0,rl(2)]);
+% draw circle at r == 0.5 (where r == 1 would be the outer plot edge)
+rl = rlim;
+obj1.drawCirc((rl(2)-rl(1))/2,'REPLACE_WITH_DASH_DASHb','LineWidth',2)
+obj1.scaleBarSide = 'right';
+obj1.polarAxs.ThetaZeroLocation = 'right';
+obj1.setThetaLabel('Direction','bottomleft');
+% draw resultant vector r as arrow
+delete(obj1.rH)
+obj1.drawArrow(obj1.avgAng,obj1.r * range(rl),'HeadWidth',10,'LineWidth',2,'Color','r')
+% Change theta- and rho-axis ticks
+obj1.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(0:90:360);
+rticks(0:4:20);
+obj1.drawScale; % update scale bar
+%% Plot Multi-Sample Distribution
+% Generate another noisy sample with a different distribution-width |kappa|.
+rng default
+s2Dist = rad2deg(circ_vmrnd(pi/2,1.5,100));
+sCell = {sDist,s2Dist}; % pack both samples into a cell-array
+figure
+CircHist(sCell,nBins);
+%% Combine Multiple Histograms in One Figure
+% Create subplot, note that the created |axes| must be a |polaraxes|.
+fH = figure;
+subAx1 = subplot(1,2,1,polaraxes);
+subAx2 = subplot(1,2,2,polaraxes);
+obj2 = CircHist(sDist,nBins,'ax',subAx1);
+obj3 = CircHist(s2Dist,nBins,'ax',subAx2);
+% Make rho-axes equal for both diagrams
+maxRho = max([max(rlim(subAx1)),max(rlim(subAx2))]);
+newLimits = [min(rlim(subAx1)),maxRho];
+obj2.setRLim(newLimits);
+obj3.setRLim(newLimits);
+% Adjust figure-window size
+drawnow
+fH.Position(3) = 1100; % width
+fH.Position(4) = 500; % height
+%% Plot Already-Binned Data
+% Bin the generated multi-sample distribution before plotting.
+edges = 0:10:360;
+histData = histcounts(mod([sDist;s2Dist],360),edges);
+% Note that |edges| can be omitted because the number of bins results from the number of
+% data points in |histData|, but that |'dataType'| must be specified as |'histogram'|.
+figure
+CircHist(histData,'dataType','histogram');
+%% Axial Data
+% Copy the von Mises data with an offset of 180 deg to generate an axial, bimodal
+% distribution.
+sAxial = [sDist;sDist+180];
+%%
+% Call |CircHist| with |'areAxialData'| specified as |true|.
+figure
+CircHist(sAxial,nBins,'areAxialData',true);
+%%
+% Note that now the average angle is indicated by an axis that halves the diagram at this
+% angle.
+%% Draw Arrows
+rng default
+arrowLen = randn(numel(sDist),1); % random arrow lengths
+arrowLen = arrowLen / max(arrowLen);
+arrowLen = arrowLen + abs(min(arrowLen));
+figure
+obj4 = CircHist([1,2],36); % dummy data
+delete([obj4.avgAngH;obj4.avgAngCiH(:);obj4.barH(:);obj4.rH]); % remove dummy data
+title('');
+obj4.scaleBar.Label.String = 'Vector length';
+obj4.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(0:90:360);
+arrowH = obj4.drawArrow(sDist,arrowLen);
+%%
+% Change visual properties and add another arrow.
+set(arrowH,'HeadStyle','plain','HeadWidth',3)
+% Draw a single arrow that ends at the outer plot edge
+avgAng = circ_mean(deg2rad(sDist),arrowLen); % average angle, weighted by arrow length
+obj4.drawArrow(rad2deg(avgAng),[],'Color','r','LineWidth',3)
+%%
+drawnow % (else, the last figure is not shown in the published version for some reason)
+%% Enable Tab Auto-Completion for Object Construction
+% If |functionSignatures.json| is located in the same directory as the |@CircHist| folder,
+% Name-Value pairs of the object-constructor call can be auto-completed as it is the case
+% for builtin MATLAB functions. See also:
+% <https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html>
+%
+% <<tab-auto.png>>
+%
+##### SOURCE END #####
+--></body></html>
