@@ -1,0 +1,112 @@
+{
+	"CircHist": {
+		"inputs":
+		[{
+				"name": "data",
+				"kind": "required",
+				"type": ["numeric"],
+				"purpose": "Angular data in degrees"
+			}, {
+				"name": "edges",
+				"kind": "ordered",
+				"type": ["numeric"],
+				"purpose": "Histogram edges or number of bins"
+			}, {
+				"name": "dataType",
+				"kind": "namevalue",
+				"type": ["char", "choices={'distribution','histogram'}"],
+				"purpose": "Input-data are distributions of angles or already-binned histogram-values"
+			}, {
+				"name": "histType",
+				"kind": "namevalue",
+				"type": ["char", "choices={'count','frequency'}"],
+				"purpose": ""
+			}, {
+				"name": "binSizeSec",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar", "positive"],
+				"purpose": ""
+			}, {
+				"name": "areAxialData",
+				"kind": "namevalue",
+				"type": [["logical", "scalar"], ["numeric", "scalar"]],
+				"purpose": "Specify whether input-data are axial or circular"
+			}, {
+				"name": "scaleBarSide",
+				"kind": "namevalue",
+				"type": ["char", "choices={'left', 'right'}"],
+				"purpose": "Specify side of rho-axis scale bar"
+			}, {
+				"name": "drawAvgAng",
+				"kind": "namevalue",
+				"type": [["logical", "scalar"], ["numeric", "scalar"]],
+				"purpose": "Specify whether average-angle should be graphically included"
+			}, {
+				"name": "avgAng",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar"],
+				"purpose": "Numeric value (degree) of average angle"
+			}, {
+				"name": "drawAvgAngCi",
+				"kind": "namevalue",
+				"type": [["logical", "scalar"], ["numeric", "scalar"]],
+				"purpose": "Specify whether 95 % confidence interval of average-angle should be graphically included"
+			}, {
+				"name": "avgAngCi",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar", "positive"],
+				"purpose": "Numeric value (degree) of 95 % confidence interval (AVGANG +/- AVGANGCI)"
+			}, {
+				"name": "drawR",
+				"kind": "namevalue",
+				"type": [["logical", "scalar"], ["numeric", "scalar"]],
+				"purpose": "Specify whether resultant vector length should be graphically included"
+			}, {
+				"name": "r",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar", ">=0", "<=1"],
+				"purpose": "Numeric value of resultant vector length (between 0 and 1)"
+			}, {
+				"name": "baseLineOffset",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar"],
+				"purpose": ""
+			}, {
+				"name": "adjustSlope",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar"],
+				"purpose": ""
+			}, {
+				"name": "ax",
+				"kind": "namevalue",
+				"type": ["scalar", "matlab.graphics.axis.PolarAxes"],
+				"purpose": "Axes handle to plot diagram into"
+			}, {
+				"name": "colorBar",
+				"kind": "namevalue",
+				"type": [["numeric", "vector", "numel=3", "positive"], ["scalar", "char", "choices={'r','g','b','y','m','c','w','k'}"]],
+				"purpose": "Color of bars"
+			}, {
+				"name": "colorStd",
+				"kind": "namevalue",
+				"type": [["numeric", "vector", "numel=3", "positive"], ["scalar", "char", "choices={'r','g','b','y','m','c','w','k'}"]],
+				"purpose": "Color of standard-deviation lines"
+			}, {
+				"name": "colorAvgAng",
+				"kind": "namevalue",
+				"type": [["numeric", "vector", "numel=3", "positive"], ["scalar", "char", "choices={'r','g','b','y','m','c','w','k'}"]],
+				"purpose": "Color of average-angle lines"
+			}, {
+				"name": "colorR",
+				"kind": "namevalue",
+				"type": [["numeric", "vector", "numel=3", "positive"], ["scalar", "char", "choices={'r','g','b','y','m','c','w','k'}"]],
+				"purpose": "Color of resultant-vector-length lines"
+			}, {
+				"name": "fontSize",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar", "positive"],
+				"purpose": "Font size of axis labels"
+			}
+		]
+	}
+}
