@@ -2,7 +2,7 @@ classdef CircHist < handle
     %CircHist   Class representing a figure with a circular histogram. Constructing an
     % object creates a polar-coordinates axes containing a histogram. Circular statistics
     % (average angle, 95 % confidence interval, resultant vector length, Rayleigh test of
-    % uniformity and linear-circular correlation) are automatically calculated using the
+    % uniformity and circular-linear correlation) are automatically calculated using the
     % CircStat toolbox and stored as object properties. Note that this is a handle class,
     % but that properties of the plot can be accessed via properties and methods of the
     % created object. Input data may be either angular distributions or already-binned
