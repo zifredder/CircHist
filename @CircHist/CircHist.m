@@ -174,17 +174,21 @@ classdef CircHist < handle
     %                                   above).
     %       stdWidth                    Change standard-deviation-whisker width (usage: as
     %                                   above).
-    %       toPdf(fileName)             Save as pdf-file with the specified file name.
-    %       toPng(fileName,resol)       Save as png-file with the specified file name at
-    %                                   the optionally specified resolution (e.g.
+    %       toPdf(fileName)             Save as pdf-file with the optionally specified
+    %                                   file name (file chooser is opened if omitted).
+    %       toPng(fileName,resol)       Save as png-file with the optionally specified
+    %                                   file name (file chooser is opened if omitted) at
+    %                                   the optionally specified resolution (accepts the
+    %                                   same specification pattern as PRINT, such as
     %                                   '-r300').
     %       drawCirc(rho,lineSpec)      Draws a circle in the plot with radius RHO, line
     %                                   appearance optionally specified by LINESPEC (see
     %                                   DOC LINESPEC). Optionally returns the handle to
-    %                                   the graphics object. Example usage:
+    %                                   the drawn graphics object. Example usage:
     %                                   h = obj.drawCirc(15,'-g','LineWidth',4);
     %       drawScale                   Updates the rho-axis scale; call this, e. g.,
-    %                                   after the theta-axis ticks have changed (usage:
+    %                                   after the theta-axis ticks have changed or when
+    %                                   the scale is somewhat messed up (usage:
     %                                   obj.drawScale).
     %       exampleCircHist             Creates example diagrams.
     %
@@ -1228,7 +1232,13 @@ classdef CircHist < handle
         function toPdf(self,fileName)
             %toPdf  Save histogram as (FILENAME).pdf.
             %
-            %   circHistObj.toPdf(fileName);
+            %   obj.toPdf;
+            %   obj.toPdf(filename);
+            
+            if nargin < 2, [fn,pth] = uiputfile('.pdf');
+                assert(all(fn ~= 0),'File not specified.');
+                fileName = [pth,fn];
+            end
             
             if exist('toPdf','file') % call custom function if available
                 toPdf(self.figH,fileName);
@@ -1240,9 +1250,14 @@ classdef CircHist < handle
             %toPng Save histogram as (FILENAME).png at the optionally specified resolution
             % (default = 90 dpi). Specify RESOL as a string of the pattern '-r90'.
             %
+            %   obj.toPng;
             %   obj.toPng(filename);
             %   obj.toPng(filename,resol);
             
+            if nargin < 2, [fn,pth] = uiputfile('.png');
+                assert(all(fn ~= 0),'File not specified.');
+                fileName = [pth,fn];
+            end
             if nargin < 3, resol = '-r90'; end
             
             if exist('toPng','file') % call custom function if available
