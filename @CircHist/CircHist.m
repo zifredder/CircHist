@@ -138,8 +138,11 @@ classdef CircHist < handle
     %
     %
     %   ---Methods and Noteworthy Properties:
-    %       setRLim([lower,upper])      Change rho-axis limits (usage:
-    %                                   obj.setRLim([lower,upper])) (get current limits by
+    %       setRLim(limits)             Change rho-axis limits. Usage:
+    %                                   obj.setRLim(limits), where LIMITS is a two-element
+    %                                   vector with the first element defining the lower
+    %                                   limit and the second element defining the upper
+    %                                   limit, in data units (get the current limits by
     %                                   calling RLIM). Do not use RLIM to change the
     %                                   limits because this does not update diagram
     %                                   elements that depend on the diagram boundaries.
@@ -152,6 +155,10 @@ classdef CircHist < handle
     %                                   Specify TXT as a cell array of characters to add
     %                                   line breaks. Access the created text-object via
     %                                   obj.thetaLabel.
+    %       thetaLabel                  Handle to the text object as created by
+    %                                   SETTHETALABEL. Access it to change text properties
+    %                                   such as fontsize, e. g.: obj.thetaLabel.FontSize =
+    %                                   15;
     %       drawArrow(theta,rho)        Draws arrows from the plot center at specified
     %                                   angles with specified lengths; usage:
     %                                   obj.drawArrow(theta,rho,Name,Value), where THETA
@@ -392,7 +399,7 @@ classdef CircHist < handle
             
             data            = pr.Results.data;
             edges           = pr.Results.edges;
-            if isscalar(edges), edges = 0 : (360/edges) : 360; end
+            if isscalar(edges), edges = linspace(0, 360, edges + 1); end
             
             self.dataType   = pr.Results.dataType;
             areDistribData  = strcmpi(self.dataType,'distribution');
@@ -763,102 +770,7 @@ classdef CircHist < handle
             % existing axes in an invisible figure.
             figH.Visible = figVisibleState;
         end
-        %%
-        %%
-        %% drawBars
-        function drawBars(self)
-            % Draws the bars. Needs to be done each time the r-axis limits change because
-            % it's stupid.
-            
-            delete(self.barH);
-            
-            binSizeDeg = abs(self.edges(1) - self.edges(2));
-            binCentersDeg = self.edges(1:end-1) + binSizeDeg/2;
-            
-            lowerLim = self.polarAxs.RLim(1); % lower limit of radius-axis
-            
-            % properties
-            lineSp = '-';
-            lineWBar = self.barWidth;
-            clrBar = self.colorBar;
-            
-            % standard dev. bars and whiskers
-            % whisker-endings consist of a short line starting at (whisker-end - whiskLen)
-            % and ending at the whisker-end
-            lineWStd = self.stdWidth;
-            lineWStdWhisk = lineWBar * 0.7; %width
-            clrStd = self.colorStd;
-            whiskLen = .15;
-            
-            % draw
-            nBars = numel(binCentersDeg);
-            for iB = 1:nBars
-                currAng = deg2rad(binCentersDeg(iB)); %angle of bar in rad
-                currVal = self.histData(iB,1);
-                if currVal == 0 || currVal <= lowerLim % skip bar-drawing
-                    continue, end
-                currStd = self.histData(iB,2);
-                
-                % specify the bar: a line between the base line of the plot (at theta =
-                % angle and rho = 0) and the point specified by the angle and the
-                % radius-value (at theta = angle and rho = bar height)
-                thetaVal = [currAng,currAng];
-                rhoVal = [0,currVal];
-                % adjust bar-offset depending on axis-offset
-                if lowerLim > 0, rhoVal(1) = lowerLim; end
-                polarplot(self.polarAxs,thetaVal,rhoVal...
-                    ,lineSp,'lineWidth',lineWBar,'color',clrBar,'Tag','histBar');
-                
-                if currStd > 0
-                    % specify the standard deviation whisker: a line between the outer end
-                    % of the bar (at theta = angle and rho = bar height) and the same end
-                    % extended by the standard deviation (at theta = angle and rho = bar
-                    % height + standard deviation)
-                    thetaStd = [currAng,currAng];
-                    rhoStd = [currVal,currVal+currStd];
-                    polarplot(self.polarAxs,thetaStd,rhoStd,lineSp,'lineWidth',lineWStd...
-                        ,'color',clrStd,'Tag','stdWhisk');
-                    
-                    % whisker-endings: short lines thicker than the whisker, starting at
-                    % (whisker-end - whiskLen) and ending at the whisker-end
-                    thetaStdWhisk = thetaStd;
-                    rhoStdWhisk = [currVal+currStd-whiskLen,currVal+currStd];
-                    polarplot(self.polarAxs,thetaStdWhisk,rhoStdWhisk,lineSp,'lineWidth',...
-                        lineWStdWhisk,'color',clrStd,'Tag','stdWhiskEnd');
-                end
-            end
-            self.barH = findobj(self.polarAxs,'Tag','histBar');
-            self.stdH = findobj(self.polarAxs,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
-            if ~isempty(self.avgAngH) && isvalid(self.avgAngH)
-                uistack(self.avgAngH,'top');
-            end
-            if ~isempty(self.rH) && isvalid(self.rH)
-                uistack(self.rH,'top');
-            end
-        end
-        %% drawBaseLine
-        function drawBaseLine(self)
-            % Draws a base line at 0. This function should be called before drawWhiteDisk
-            % is called, else the base line will be obscured by the white area
-            
-            delete(findobj(self.polarAxs,'Tag','baseLine')); % delete old if present
-            % skip drawing if lower axis-limit > 0
-            if self.polarAxs.RLim(1) > 0, return, end
-            
-            % properties
-            tag = 'baseLine';
-            lineSp = '-';
-            lineW = 1;
-            clr = self.colorBar; % baseline color, same as bar-color
-            
-            binSizeDeg = abs(self.edges(1) - self.edges(2));
-            thetaBase = 0:deg2rad(binSizeDeg):2*pi; % degree-values between bars
-            rhoBase = zeros(numel(thetaBase),1);
-            polarplot(self.polarAxs,thetaBase,rhoBase,lineSp,'lineWidth',lineW...
-                ,'color',clr,'Tag',tag);
-            uistack(findobj(self.polarAxs,'Tag',tag),'bottom');
-            uistack(findobj(self.polarAxs,'Tag',tag),'up');
-        end
+        %%        
         %% drawScale; draw scale bar
         function drawScale(self)
             %drawScale Draws the scale bar. Used as SizeChangedFcn for figure so it is
@@ -983,28 +895,6 @@ classdef CircHist < handle
             end
             % restore initial state of visibility
             self.figH.Visible = figVisibleState;
-        end
-        %% drawWhiteDisk
-        function drawWhiteDisk(self)
-            % draw white disk in the middle to obscure the axis-lines
-            if ~isempty(self.whiteDiskH), delete(self.whiteDiskH); end
-            
-            offset = self.polarAxs.RLim(1);
-            if offset >= 0, return, end % nothing to obscure
-            
-            pAx = self.polarAxs;
-            rhoWhite = [offset,0];
-            thetaLims = thetalim(pAx);
-            if strcmp(pAx.ThetaAxisUnits,'radians'), thetaLims = rad2deg(thetaLims); end
-            % 2 degree steps between white lines
-            thetaWhite = deg2rad(thetaLims(1):2:thetaLims(2));
-            for t = 1:numel(thetaWhite)
-                currAng = thetaWhite(t);
-                polarplot(pAx,[currAng,currAng],rhoWhite...
-                    ,'linestyle','-','color','w','linewidth',3,'Tag','whiteDisk');
-            end
-            self.whiteDiskH = findobj(pAx,'Tag','whiteDisk');
-            uistack(self.whiteDiskH,'bottom'); % move lines to lowest graphical layer
         end
         %% change scale limits
         function setRLim(self,limits)
@@ -1439,7 +1329,125 @@ classdef CircHist < handle
             set(arrwH,'Units',arrwUnitsOld);
         end
     end
-    methods (Static)
+    methods (Access = protected)
+        %% drawBars
+        function drawBars(self)
+            % Draws the bars. Needs to be done each time the r-axis limits change because
+            % it's stupid.
+            
+            delete(self.barH);
+            
+            binSizeDeg = abs(self.edges(1) - self.edges(2));
+            binCentersDeg = self.edges(1:end-1) + binSizeDeg/2;
+            
+            lowerLim = self.polarAxs.RLim(1); % lower limit of radius-axis
+            
+            % properties
+            lineSp = '-';
+            lineWBar = self.barWidth;
+            clrBar = self.colorBar;
+            
+            % standard dev. bars and whiskers
+            % whisker-endings consist of a short line starting at (whisker-end - whiskLen)
+            % and ending at the whisker-end
+            lineWStd = self.stdWidth;
+            lineWStdWhisk = lineWBar * 0.7; %width
+            clrStd = self.colorStd;
+            whiskLen = .15;
+            
+            % draw
+            nBars = numel(binCentersDeg);
+            for iB = 1:nBars
+                currAng = deg2rad(binCentersDeg(iB)); %angle of bar in rad
+                currVal = self.histData(iB,1);
+                if currVal == 0 || currVal <= lowerLim % skip bar-drawing
+                    continue, end
+                currStd = self.histData(iB,2);
+                
+                % specify the bar: a line between the base line of the plot (at theta =
+                % angle and rho = 0) and the point specified by the angle and the
+                % radius-value (at theta = angle and rho = bar height)
+                thetaVal = [currAng,currAng];
+                rhoVal = [0,currVal];
+                % adjust bar-offset depending on axis-offset
+                if lowerLim > 0, rhoVal(1) = lowerLim; end
+                polarplot(self.polarAxs,thetaVal,rhoVal...
+                    ,lineSp,'lineWidth',lineWBar,'color',clrBar,'Tag','histBar');
+                
+                if currStd > 0
+                    % specify the standard deviation whisker: a line between the outer end
+                    % of the bar (at theta = angle and rho = bar height) and the same end
+                    % extended by the standard deviation (at theta = angle and rho = bar
+                    % height + standard deviation)
+                    thetaStd = [currAng,currAng];
+                    rhoStd = [currVal,currVal+currStd];
+                    polarplot(self.polarAxs,thetaStd,rhoStd,lineSp,'lineWidth',lineWStd...
+                        ,'color',clrStd,'Tag','stdWhisk');
+                    
+                    % whisker-endings: short lines thicker than the whisker, starting at
+                    % (whisker-end - whiskLen) and ending at the whisker-end
+                    thetaStdWhisk = thetaStd;
+                    rhoStdWhisk = [currVal+currStd-whiskLen,currVal+currStd];
+                    polarplot(self.polarAxs,thetaStdWhisk,rhoStdWhisk,lineSp,'lineWidth',...
+                        lineWStdWhisk,'color',clrStd,'Tag','stdWhiskEnd');
+                end
+            end
+            self.barH = findobj(self.polarAxs,'Tag','histBar');
+            self.stdH = findobj(self.polarAxs,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
+            if ~isempty(self.avgAngH) && isvalid(self.avgAngH)
+                uistack(self.avgAngH,'top');
+            end
+            if ~isempty(self.rH) && isvalid(self.rH)
+                uistack(self.rH,'top');
+            end
+        end
+        %% drawBaseLine
+        function drawBaseLine(self)
+            % Draws a base line at 0. This function should be called before drawWhiteDisk
+            % is called, else the base line will be obscured by the white area
+            
+            delete(findobj(self.polarAxs,'Tag','baseLine')); % delete old if present
+            % skip drawing if lower axis-limit > 0
+            if self.polarAxs.RLim(1) > 0, return, end
+            
+            % properties
+            tag = 'baseLine';
+            lineSp = '-';
+            lineW = 1;
+            clr = self.colorBar; % baseline color, same as bar-color
+            
+            binSizeDeg = abs(self.edges(1) - self.edges(2));
+            thetaBase = 0:deg2rad(binSizeDeg):2*pi; % degree-values between bars
+            rhoBase = zeros(numel(thetaBase),1);
+            polarplot(self.polarAxs,thetaBase,rhoBase,lineSp,'lineWidth',lineW...
+                ,'color',clr,'Tag',tag);
+            uistack(findobj(self.polarAxs,'Tag',tag),'bottom');
+            uistack(findobj(self.polarAxs,'Tag',tag),'up');
+        end
+        %% drawWhiteDisk
+        function drawWhiteDisk(self)
+            % draw white disk in the middle to obscure the axis-lines
+            if ~isempty(self.whiteDiskH), delete(self.whiteDiskH); end
+            
+            offset = self.polarAxs.RLim(1);
+            if offset >= 0, return, end % nothing to obscure
+            
+            pAx = self.polarAxs;
+            rhoWhite = [offset,0];
+            thetaLims = thetalim(pAx);
+            if strcmp(pAx.ThetaAxisUnits,'radians'), thetaLims = rad2deg(thetaLims); end
+            % 2 degree steps between white lines
+            thetaWhite = deg2rad(thetaLims(1):2:thetaLims(2));
+            for t = 1:numel(thetaWhite)
+                currAng = thetaWhite(t);
+                polarplot(pAx,[currAng,currAng],rhoWhite...
+                    ,'linestyle','-','color','w','linewidth',3,'Tag','whiteDisk');
+            end
+            self.whiteDiskH = findobj(pAx,'Tag','whiteDisk');
+            uistack(self.whiteDiskH,'bottom'); % move lines to lowest graphical layer
+        end
+    end
+    methods (Static, Hidden)
         %% redrawScale
         function redrawScale(~,~)
             % Called when the figure window-size changes, should not be called manually
@@ -1452,6 +1460,8 @@ classdef CircHist < handle
                 arrayfun(@(ax) ax.UserData.circHistObj.updateArrows,pAxH);
             end
         end
+    end
+    methods (Static)
         %% entry for separate usage-example script
         exampleCircHist
     end
