@@ -255,6 +255,12 @@ classdef CircHist < handle
     %
     % See also CircStat polaraxes polarplot thetatickformat thetaticks rticks thetalim
     % uistack
+    
+    % TODO: When THETALIM is set to, e. g., [0,90], the scale misbehaves because it is
+    % drawn as if the polaraxes spanned the whole axes. Workaround: Delete the scalebar
+    % and run |obj.polarAxs.RAxis.TickLabelsMode = 'auto'|, then the labels are added
+    % directly at the edge of the plot, which is actually pretty useful, so there is no
+    % need to change scalebar behaviour ... maybe add this as a proper note in the doc.
 
     properties (SetAccess = immutable)
         data            % Required input: Data in degree.
@@ -1353,7 +1359,14 @@ classdef CircHist < handle
             lineWStd = self.stdWidth;
             lineWStdWhisk = lineWBar * 0.7; %width
             clrStd = self.colorStd;
-            whiskLen = .15;
+            
+            % adjust tip-width (in data units) to the range of the data; this is not
+            % optimal, but OK (optimal would be adjusting it to the plot diameter, but
+            % this value is not known prior to plotting all bars and whiskers, so it would
+            % have to be adjusted after everything is plotted ... which is not impossible,
+            % but would require quite some change, so I might implement this some time
+            % when bored)
+            whiskLen = 0.016 * max(self.histData(:, 1));
             
             % draw
             nBars = numel(binCentersDeg);
