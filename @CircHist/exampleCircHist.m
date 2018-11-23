@@ -9,26 +9,26 @@ nBins = 36; % number of bins, makes bin size of 10 deg
 obj1 = CircHist(sDist, nBins);
 %%
 % Adjust appearance:
-obj1.colorBar = 'k'; 
-obj1.avgAngH.LineStyle = '--';
-obj1.avgAngH.LineWidth = 1;
-obj1.colorAvgAng = [.5 .5 .5];
+obj1.colorBar = 'k';  % change color of bars
+obj1.avgAngH.LineStyle = '--'; % make average-angle line dashed
+obj1.avgAngH.LineWidth = 1; % make average-angle line thinner
+obj1.colorAvgAng = [.5 .5 .5]; % change average-angle line color
 % remove offset between bars and plot-center
-rl = rlim;
-obj1.setRLim([0, rl(2)]);
+rl = rlim; % get current limits
+obj1.setRLim([0, rl(2)]); % set lower limit to 0
 % draw circle at r == 0.5 (where r == 1 would be the outer plot edge)
 rl = rlim;
 obj1.drawCirc((rl(2) - rl(1)) /2, '--b', 'LineWidth', 2)
-obj1.scaleBarSide = 'right';
-obj1.polarAxs.ThetaZeroLocation = 'right';
-obj1.setThetaLabel('Direction', 'bottomleft');
+obj1.scaleBarSide = 'right'; % draw rho-axis on the right side of the plot
+obj1.polarAxs.ThetaZeroLocation = 'right'; % rotate the plot to have 0° on the right side
+obj1.setThetaLabel('Direction', 'bottomleft'); % add label
 % draw resultant vector r as arrow
 delete(obj1.rH)
 obj1.drawArrow(obj1.avgAng, obj1.r * range(rl), 'HeadWidth', 10, 'LineWidth', 2, 'Color', 'r')
 % Change theta- and rho-axis ticks
-obj1.polarAxs.ThetaAxis.MinorTickValues = [];
-thetaticks(0:90:360);
-rticks(0:4:20);
+obj1.polarAxs.ThetaAxis.MinorTickValues = []; % remove dotted tick-lines
+thetaticks(0:90:360); % change major ticks
+rticks(0:4:20); % change rho-axis tick-steps
 obj1.drawScale; % update scale bar
 %% Plot Multi-Sample Distribution
 % Generate another noisy sample with a different distribution-width |kappa|.
@@ -55,10 +55,12 @@ fH.Position(3) = 1100; % width
 fH.Position(4) = 500; % height
 %% Plot Already-Binned Data
 % Bin the generated multi-sample distribution before plotting.
+%
+% Note that |edges| can be omitted in the |CircHist| call because the number of bins is
+% implicitly defined by the number of data points in |histData|, but that |'dataType'|
+% must be specified as |'histogram'|.
 edges = 0:10:360;
 histData = histcounts(mod([sDist; s2Dist], 360), edges);
-% Note that |edges| can be omitted because the number of bins results from the number of
-% data points in |histData|, but that |'dataType'| must be specified as |'histogram'|.
 figure
 CircHist(histData, 'dataType', 'histogram');
 %% Axial Data
@@ -81,7 +83,7 @@ arrowLen = arrowLen / max(arrowLen);
 arrowLen = arrowLen + abs(min(arrowLen));
 figure
 obj4 = CircHist([1, 2], 36); % dummy data
-delete([obj4.avgAngH; obj4.avgAngCiH(:); obj4.barH(:); obj4.rH]); % remove dummy data
+delete([obj4.avgAngH; obj4.avgAngCiH(:); obj4.barH(:); obj4.rH]); % remove dummy data to get an empty plot
 title('');
 obj4.scaleBar.Label.String = 'Vector length';
 obj4.polarAxs.ThetaAxis.MinorTickValues = [];
@@ -92,9 +94,7 @@ arrowH = obj4.drawArrow(sDist, arrowLen);
 set(arrowH, 'HeadStyle', 'plain', 'HeadWidth', 3)
 % Draw a single arrow that ends at the outer plot edge
 avgAng = circ_mean(deg2rad(sDist), arrowLen); % average angle, weighted by arrow length
-obj4.drawArrow(rad2deg(avgAng), [], 'Color', 'r', 'LineWidth', 3)
-%%
-drawnow % (else, the last figure is not shown in the published version for some reason)
+obj4.drawArrow(rad2deg(avgAng), [], 'Color', 'r', 'LineWidth', 3) % by specifying the second argument as empty, the arrow automatically ends at the plot edge
 %% Enable Tab Auto-Completion for Object Construction
 % If |functionSignatures.json| is located in the same directory as the |@CircHist| folder,
 % Name-Value pairs of the object-constructor call can be auto-completed as it is the case
