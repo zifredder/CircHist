@@ -70,7 +70,7 @@
 				"name": "baseLineOffset",
 				"kind": "namevalue",
 				"type": ["numeric", "scalar"],
-				"purpose": ""
+				"purpose": "Offset size (distance between plot center and histogram baseline) in percent of the rho-axis range"
 			}, {
 				"name": "adjustSlope",
 				"kind": "namevalue",

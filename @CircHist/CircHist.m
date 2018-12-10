@@ -14,13 +14,14 @@ classdef CircHist < handle
     %                 https://github.com/circstat/circstat-matlab)
     %
     %   Usage:  CircHist(data);
-    %           CircHist(data,edges);
-    %           CircHist(data,nBins);
-    %           CircHist(___,Name,Value);
+    %           CircHist(data, edges);
+    %           CircHist(data, nBins);
+    %           CircHist(___, Name, Value);
     %           obj = CircHist(___);
     %
     %
     %   ---Required Input Argument:
+    %
     %       data        Either one vector of angle samples (distribution) in degree (!), a
     %                   cell array of such samples, or a two-column matrix of N length
     %                   where N is the number of bins, the first column contains the
@@ -31,6 +32,7 @@ classdef CircHist < handle
     %
     %
     %  ---Optional Input Argument:
+    %
     %       edges       Edges of histogram bins, either specified by a vector of bin-edges
     %                   in degree, e. g. [0:20:360] for 20-degree bins, or by a scalar
     %                   positive integer specifying the number of bins between 0 and 360
@@ -47,6 +49,7 @@ classdef CircHist < handle
     %
     %
     %   ---Optional Name-Value Pair Input:
+    %
     %   dataType        'distribution'(default)/'histogram'. Type of input data:
     %                   'distribution' treats the input data as distributions of angles
     %                   (degree); the data of each input vector are binned inside the
@@ -101,14 +104,14 @@ classdef CircHist < handle
     %   r               Numeric value of the resultant vector length (between 0 and 1);
     %                   same behavior as for AVGANG.
     %
-    %   baseLineOffset  Numeric value (default == 2) specifying the factor that scales the
-    %                   size of the offset in the center of the plot. The default value
-    %                   produces nice results; lower the value (negative values allowed)
-    %                   to increase the size, increase the value to decrease the size.
-    %                   Specify it as NaN to produce an offset of 0. (This functionality
-    %                   might need improvement, maybe just implement it as a percent value
-    %                   of the plot diameter; as of now, it depends on bin-size and
-    %                   ADJUSTSLOPE)
+    %   baseLineOffset  Numeric value (default == 20; negative values allowed) specifying
+    %                   the size of the offset between the plot center and the histogram
+    %                   zero-baseline in percent of the rho-axis range. I. e., 0 makes the
+    %                   bars start at the plot center and 100 makes them start exactly
+    %                   between the center and the outer plot edge. Use this property to
+    %                   unify the offset size across different histograms, as the absolute
+    %                   offset size on the screen will be the same for different
+    %                   histograms if this property is equal.
     %
     %   adjustSlope     Slope that defines how strongly optical properties such as bar
     %                   width scale with bin-size; default == 0.3.
@@ -121,11 +124,15 @@ classdef CircHist < handle
     %   colorBar        Color of bars (default == [0 .45 .74]; (standard MATLAB blue)).
     %                   Can be adjusted after plotting by changing the property of the
     %                   same name.
+    %
     %   colorStd        Color of standard-deviation lines (default == 'k'). Can be
     %                   adjusted after plotting.
+    %
     %   colorAvgAng     Color of average-angle line (default == [.85 .33 .1]; (orange)).
     %                   Can be adjusted after plotting.
+    %
     %   colorR          Color of r line (default == 'k'). Can be adjusted after plotting.
+    %
     %   fontSize        Font size of axis labels (default == 13). Corresponds to the
     %                   FONTSIZE property of the POLARAXES. Can be adjusted after
     %                   plotting.
@@ -138,7 +145,8 @@ classdef CircHist < handle
     %
     %
     %   ---Methods and Noteworthy Properties:
-    %       setRLim(limits)             Change rho-axis limits. Usage:
+    %
+    %   setRLim(limits)                 Change rho-axis limits. Usage:
     %                                   obj.setRLim(limits), where LIMITS is a two-element
     %                                   vector with the first element defining the lower
     %                                   limit and the second element defining the upper
@@ -146,7 +154,25 @@ classdef CircHist < handle
     %                                   calling RLIM). Do not use RLIM to change the
     %                                   limits because this does not update diagram
     %                                   elements that depend on the diagram boundaries.
-    %       setThetaLabel(txt,location) Adds (or updates) a label saying TXT outside of
+    %
+    %   baseLineOffset                  Defines the offset between the plot center and the
+    %                                   histogram zero-baseline as a percent-value of the
+    %                                   current (if set after plotting) rho-axis range.
+    %                                   Usage: obj.setBaselineOffsetPrcnt = prcnt, where
+    %                                   PRCNT is the percent-value of the axis range. E.
+    %                                   g. if PRCNT is specified as 100, the baseline is
+    %                                   exactly between the plot center and the outer plot
+    %                                   edge. This is useful when several histograms are
+    %                                   created that should all have the same appearance
+    %                                   and/or axis range. To unify the baseline offset
+    %                                   size on the screen, set the same 'baseLineOffset'
+    %                                   value for each histogram (all axes must have the
+    %                                   same size, too); to unify both the axis limits and
+    %                                   the baseline offset, first set all histograms to
+    %                                   have the same upper rho-axis limit by using
+    %                                   SETRLIM, then set 'baseLineOffset'.
+    %
+    %   setThetaLabel(txt[, location])  Adds (or updates) a label saying TXT outside of
     %                                   the plot at the location specified by LOCATION,
     %                                   which may be one of the following: 'topleft',
     %                                   'topright', 'bottomleft'(default if omitted),
@@ -155,56 +181,78 @@ classdef CircHist < handle
     %                                   Specify TXT as a cell array of characters to add
     %                                   line breaks. Access the created text-object via
     %                                   obj.thetaLabel.
-    %       thetaLabel                  Handle to the text object as created by
+    %
+    %   thetaLabel                      Handle to the text object as created by
     %                                   SETTHETALABEL. Access it to change text properties
     %                                   such as fontsize, e. g.: obj.thetaLabel.FontSize =
     %                                   15;
-    %       drawArrow(theta,rho)        Draws arrows from the plot center at specified
-    %                                   angles with specified lengths; usage:
+    %
+    %   drawArrow(theta[, rho] ...      Draws arrows from the plot center at specified
+    %             [, Name, Value])      angles with specified lengths; usage:
     %                                   obj.drawArrow(theta,rho,Name,Value), where THETA
     %                                   is a scalar or vector of angles in degree and RHO
     %                                   is a vector of the same size specifying the arrow
-    %                                   length in data units. RHO may be specified as []
-    %                                   to have the arrows end at the plot edge.
-    %                                   Name-Value pairs as accepted by ANNOTATION (see
-    %                                   DOC ANNOTATION) can be passed to adjust arrow
+    %                                   length in data units. RHO may be omitted or
+    %                                   specified as [] to have the arrows end at the plot
+    %                                   edge. Name-Value pairs as accepted by ANNOTATION
+    %                                   (see DOC ANNOTATION) can be passed to adjust arrow
     %                                   properties.
-    %       updateArrows                Updates arrow-positions. Call this in case the
+    %
+    %   updateArrows                    Updates arrow-positions. Call this in case the
     %                                   arrows misbehave: obj.updateArrows;
-    %       scaleBarSide                Change the side ('left'/'right') of the
+    %
+    %   scaleBarSide                    Change the side ('left'/'right') of the
     %                                   rho-axis scale bar (usage: obj.scaleBarSide =
     %                                   'right').
-    %       colorBar                    Change histogram-bar color (usage: obj.colorBar =
+    %
+    %   colorBar                        Change histogram-bar color (usage: obj.colorBar =
     %                                   newColor).
-    %       barWidth                    Change histogram-bar width (usage: as above).
-    %       colorStd                    Change standard-deviation-whisker color (usage: as
+    %
+    %   barWidth                        Change histogram-bar width (usage: as above).
+    %
+    %   colorStd                        Change standard-deviation-whisker color (usage: as
     %                                   above).
-    %       stdWidth                    Change standard-deviation-whisker width (usage: as
+    %
+    %   stdWidth                        Change standard-deviation-whisker width (usage: as
     %                                   above).
-    %       toPdf(fileName)             Save as pdf-file with the optionally specified
+    %
+    %   toPdf([fileName])               Save as pdf-file with the optionally specified
     %                                   file name (file chooser is opened if omitted).
-    %       toPng(fileName,resol)       Save as png-file with the optionally specified
+    %
+    %   toPng([fileName][, resol])      Save as png-file with the optionally specified
     %                                   file name (file chooser is opened if omitted) at
     %                                   the optionally specified resolution (accepts the
     %                                   same specification pattern as PRINT, such as
     %                                   '-r300').
-    %       drawCirc(rho,lineSpec)      Draws a circle in the plot with radius RHO, line
+    %
+    %   drawCirc(rho[, lineSpec])       Draws a circle in the plot with radius RHO, line
     %                                   appearance optionally specified by LINESPEC (see
     %                                   DOC LINESPEC). Optionally returns the handle to
-    %                                   the drawn graphics object. Example usage:
-    %                                   h = obj.drawCirc(15,'-g','LineWidth',4);
-    %       drawScale                   Updates the rho-axis scale; call this, e. g.,
+    %                                   the drawn LINE object. The created object has
+    %                                   'Circ' as its 'Tag'-property. Example usage: h =
+    %                                   obj.drawCirc(15, '-g', 'LineWidth', 4);
+    %
+    %   drawScale                       Updates the rho-axis scale; call this, e. g.,
     %                                   after the theta-axis ticks have changed or when
     %                                   the scale is somewhat messed up (usage:
     %                                   obj.drawScale).
-    %       exampleCircHist             Creates example diagrams.
+    %
+    %   UserData                        Property with arbitrary type and size. Intended to
+    %                                   be used to store additional information about the
+    %                                   plot.
+    %
+    %   exampleCircHist                 Creates example diagrams.
     %
     %
     %   ---Notes and Instructions:
+    %
     %   * For more details on a method, read its doc page, e. g.: doc CircHist.drawArrow
+    %
     %   * To change the rho-axis limits, use obj.setRLim([lower,upper]); to change the
     %     angle-axis limits, use obj.thetalim([lower,upper]) or just thetalim(_).
+    %
     %   * To change the scale-label, use obj.axisLabel = 'my label'.
+    %
     %   * To change visual properties, either use the Name-Value pairs for the constructor
     %     as specified below, or access the graphics objects via their handles that are
     %     stored as properties of the CircHist object, such as obj.polarAxs for the
@@ -214,37 +262,51 @@ classdef CircHist < handle
     %     assure that the scale bar matches the coordinate-grid after changing the figure
     %     size. Consider calling obj.drawScale after changing properties to update the
     %     scale bar. Remove the scale bar with delete(obj.scaleBar).
+    %
     %   * To adjust the bars, standard-deviation whiskers, average-angle line and r line
     %     after plotting, use their handles which are saved as properties. Access them
     %     using dot notation, e. g., h = obj.avgAngH.lineWidth, and delete them using
     %     delete(h) (not: obj.avgAngH.lineWidth = []).
+    %
     %   * Note that the constructed CircHist-object handle is stored in
     %     obj.polarAxs.UserData.circHistObj which can be accessed via the POLARAXES it has
     %     been plotted into. This may be useful if you plot a series of histograms and
     %     forget to store the CircHist-objects.
+    %
     %   * Each standard-deviation whisker consists of a long line representing the
     %     magnitude of the deviation and a very short, thick line that marks the tip of
     %     the deviation-line. Both line types are comprised in the handle-array obj.stdH;
     %     however, they can be separately accessed by calling
     %     findobj(obj.polarAxs,'Tag',TYPETAG), where TYPETAG is either 'stdWhisk' for the
     %     "main" line or 'stdWhiskEnd' for the tips.
+    %
     %   * Analogously, access the 95 % confidence-interval line(s) by accessing the
     %     handles in obj.avgAngCiH or by using findobj(obj.polarAxs,'Tag',TYPETAG), where
     %     TYPETAG is either 'avgAngCiWhisk' or 'avgAngCiWhiskEnd'.
+    %
     %   * Consider creating a new figure for each histogram because there may be
     %     side-effects regarding the axis and the scale bar if the same axes-object or
     %     figure-window are used. When plotting multiple histograms into the same figure
     %     by using the 'ax' Name-Value pair, expect issues such as overlapping graphical
     %     elements.
+    %
     %   * To change the angle-axis units into radians, call
     %     obj.polarAxs.ThetaAxisUnits = 'radians';
+    %
     %   * The axis-grid-lines in the center of the plot are obscured by white bars for
     %     cosmetic reasons. To access these bars, e. g. to change their color, refer to
     %     obj.whiteDiskH.
+    %
+    %   * When THETALIM is set to, e. g., [0,90], the scale misbehaves because it is
+    %     drawn as if the polaraxes spanned the whole axes. For this use case, delete the
+    %     scalebar and run obj.polarAxs.RAxis.TickLabelsMode = 'auto', then the labels
+    %     are added directly at the edge of the plot, at the specified rho-ticks.
+    %
     %   * To change the layer order of the graphical objects, use UISTACK, e. g.:
     %     uistack(obj.whiteDiskH,'top'). Note, however, that arrows as created from
     %     DRAWARROW are always on top of the histogram objects because they are anchored
     %     to the figure and thus are independent from objects in the histogram axes.
+    %
     %   * To get neat auto-completion for Name-Value pairs to work, add
     %     functionSignatures.json to the same directory as the @CircHist folder, or add
     %     its contents to your existing file; see also:
@@ -256,12 +318,6 @@ classdef CircHist < handle
     % See also CircStat polaraxes polarplot thetatickformat thetaticks rticks thetalim
     % uistack
     
-    % TODO: When THETALIM is set to, e. g., [0,90], the scale misbehaves because it is
-    % drawn as if the polaraxes spanned the whole axes. Workaround: Delete the scalebar
-    % and run |obj.polarAxs.RAxis.TickLabelsMode = 'auto'|, then the labels are added
-    % directly at the edge of the plot, which is actually pretty useful, so there is no
-    % need to change scalebar behaviour ... maybe add this as a proper note in the doc.
-
     properties (SetAccess = immutable)
         data            % Required input: Data in degree.
         edges           % Required input: Histogram-bin edges or number of histogram-bins.
@@ -275,7 +331,7 @@ classdef CircHist < handle
         avgAngCi        % Optional input; Numeric value of the 95 % confidence interval bounds (average +/ bounds).
         drawR           % Optional input; True(default)/false.
         r               % Optional input; Numeric value of the resultant vector length.
-        baseLineOffset  % Optional input; scaling factor for the size of the offset in the middle of the diagram.
+        
         adjustSlope     % Optional input; Slope for scaling of visual properties with bin size.
         areAxialData    % Optional input; True/false(default).
         
@@ -312,7 +368,11 @@ classdef CircHist < handle
         barWidth        % Width of bars. Change this property to adjust the bar width after plotting.
         stdWidth        % Width of standard-deviation whiskers. For adjustment after plotting.
         
+        baseLineOffset  % Optional input; offset size (distance between plot center and histogram zero-baseline) in percent of the rho-axis range
+        
         whiteDiskH      % Handles to white bars that obscure the center of the axis.
+        
+        UserData        % Variable of arbitrary type and size; initialized as [].
     end
     
     methods
@@ -353,7 +413,7 @@ classdef CircHist < handle
             def.avgAngCi       = [];
             def.drawR          = true;
             def.r              = [];
-            def.baseLineOffset = 2;
+            def.baseLineOffset = 20;
             def.adjustSlope    = 0.3;
             def.axialData      = false;
             def.axes           = [];
@@ -427,8 +487,6 @@ classdef CircHist < handle
             drawR               = self.drawR;
             self.r              = pr.Results.r;
             r                   = self.r;
-            self.baseLineOffset = pr.Results.baseLineOffset;
-            baseLineOffset      = self.baseLineOffset;
             self.adjustSlope    = pr.Results.adjustSlope;
             adjustSlope         = self.adjustSlope;
             self.areAxialData   = pr.Results.areAxialData;
@@ -639,31 +697,21 @@ classdef CircHist < handle
             
             %% draw bars and whiskers
             self.drawBars
-            %%
-            circR = max(rlim(polarAxs)); %radius of plot in data units
-            
-            % calculate baseline shift from center; depends on bin size for aesthetic reasons
-            if ~isnan(baseLineOffset)
-                % shift baseline by the fraction of the full radius and this value
-                baseLineOffsetDiv = adjustSlope * binSizeDeg + baseLineOffset;
-                baseLineOffset = -round(circR/baseLineOffsetDiv); % baseline shift in data units
-            else, baseLineOffset = 0;
-            end
-            
+            %% draw baseline, apply baseline offset
             self.drawBaseLine;
             
-            % shift radius baseline
-            polarAxs.RLim = [baseLineOffset,circR];
+            self.baseLineOffset = pr.Results.baseLineOffset;
             
             %% average angle and r
             % based on AREAXIALDATA, the average-angle and r lines are axes in the
             % histogram, or lines with the average angle as direction
             rL = rlim(polarAxs);
+            rLUpper = rL(2); % radius of plot in data units
             avgAngRad = deg2rad(avgAng);
             if ~isempty(avgAng) && drawAvgAng %plot average angle
                 if areAxialData
                     thetaAvgAng = [avgAngRad,avgAngRad+pi];
-                    rhoAvgAng = [circR,circR];
+                    rhoAvgAng = [rLUpper,rLUpper];
                 else
                     thetaAvgAng = [avgAngRad,avgAngRad];
                     rhoAvgAng = rL;
@@ -673,7 +721,7 @@ classdef CircHist < handle
             end
             if ~isempty(r) && ~isempty(avgAng) && drawR
                 % make vector length relative to plot radius (after shift)
-                rNorm = r * range(rL) + baseLineOffset;
+                rNorm = r * range(rL) + rL(1);
                 if areAxialData
                     thetaR = [avgAngRad,avgAngRad+pi];
                     rohR = [rNorm,rNorm];
@@ -909,6 +957,7 @@ classdef CircHist < handle
             %
             % circHistObj.setRLim(limits); where LIMITS == [lower,upper]
             %
+            
             rlim(self.polarAxs,limits); %change limits
             
             % update line data
@@ -943,16 +992,16 @@ classdef CircHist < handle
                     ,self.thetaLabel.UserData.location);
             end
             
-            % Sometimes, a warning with this identifier is issued for obscure reasons. To
-            % suppress this warning, it is converted to an error by calling
-            % warning('error',_). This error can then be caught and ignored.
-            wrn = warning('error','MATLAB:callback:error'); %#ok<CTPCT>
-            try   self.drawScale; % update scale
-            catch ME
-                if ~strcmp(ME.identifier,wrn.identifier)
-                    rethrow(ME); end % re-throw error if it is not this error
+            % Sometimes, a warning with this identifier is issued for obscure reasons.
+            % Owing to the obscurity, this warning is suppressed during the DRAWSCALE
+            % call.
+            warning('off', 'MATLAB:callback:error');
+            try     self.drawScale; % update scale
+            catch   ME
+                    warning('on', 'MATLAB:callback:error'); % re-enable warning
+                    rethrow(ME);
             end
-            warning(wrn); % set error back to being a warning
+            warning('on', 'MATLAB:callback:error'); % re-enable warning
             
             self.drawBaseLine;
             self.drawWhiteDisk; % adjust background
@@ -1029,16 +1078,18 @@ classdef CircHist < handle
         function set.scaleBarSide(self,side)
             %scaleBarSide Determines the side of the scale bar.
             %
-            %   obj.scaleBarSide(side); where SIDE is either 'left' or 'right'
-            assert(any(strcmpi(side,{'left','right'})) ...
-                ,'Property SCALEBARSIDE must be ''left'' or ''right''.');
-            if strcmpi(side,self.scaleBarSide), return; end % nothing to do
+            %   obj.scaleBarSide = side; where SIDE is either 'left' or 'right'
+            
+            assert(any(strcmpi(side,{'left','right'})), ...
+                'Property SCALEBARSIDE must be ''left'' or ''right''.');
+            if strcmpi(side, self.scaleBarSide), return; end % nothing to do
             
             pAx = self.polarAxs;
-            isLeft = strcmpi(side,'left');
+            isLeft = strcmpi(side, 'left');
+            
             % initially, the plot is not positioned in the center of the axes, but
             % slightly right, and there seems to be no way to center it, so the first
-            % adjustment needs to be different to subsequent adjustments
+            % adjustment needs to be different from subsequent adjustments
             if isempty(self.scaleBarSide) % first call during construction
                 if isLeft, offset = 0.05; else, offset = -0.05; end
             else
@@ -1051,6 +1102,13 @@ classdef CircHist < handle
             pAx.Position(1) = pAx.Position(1) + offset;
             pAx.Units = unitsOld;
             if ~isempty(self.scaleBar) && isvalid(self.scaleBar), self.drawScale; end
+        end
+        %% baseLineOffset
+        function set.baseLineOffset(self, ofsPcnt)
+            rlimUpper = max(rlim(self.polarAxs)); % current upper limit of rho-axis
+            ofsData = rlimUpper * ofsPcnt/100; % convert percent-offset into data units
+            self.setRLim([-ofsData, rlimUpper]); % adjust axis limits
+            self.baseLineOffset = ofsPcnt; % store value
         end
         %% change scale bar label
         function set.axisLabel(self,newLabel)
@@ -1168,22 +1226,22 @@ classdef CircHist < handle
             % as accepted by POLARPLOT. Optionally returns the graphics-object handle.
             %
             %   obj.drawCirc(rho);
-            %   obj.drawCirc(rho,Name,Value);
+            %   obj.drawCirc(rho, Name, Value);
             %   h = obj.drawCirc(___);
             %
             % See also polarplot
             
-            assert(isnumeric(rho) && isscalar(rho) ...
-                ,'First input RHO must be a numeric scalar.');
+            assert(isnumeric(rho) && isscalar(rho), ...
+                'First input RHO must be a numeric scalar.');
             
-            theta = linspace(0,2*pi,100);
-            h = polarplot(self.polarAxs,theta,repmat(rho,size(theta)),varargin{:});
+            theta = linspace(0, 2*pi, 100);
+            h = polarplot(self.polarAxs, theta, repmat(rho,size(theta)), ...
+                varargin{:}, 'Tag', 'Circ');
             
-            if isvalid(self.avgAngH), uistack(self.avgAngH,'top'); end
-            if isvalid(self.rH),      uistack(self.rH,'top'); end
+            if isvalid(self.avgAngH), uistack(self.avgAngH, 'top'); end
+            if isvalid(self.rH),      uistack(self.rH,      'top'); end
             
-            if nargout > 0 
-                hOut = h; end
+            if nargout > 0, hOut = h; end
         end
         %% drawArrow
         function hOut = drawArrow(self,theta,rho,varargin)
@@ -1360,13 +1418,13 @@ classdef CircHist < handle
             lineWStdWhisk = lineWBar * 0.7; %width
             clrStd = self.colorStd;
             
-            % adjust tip-width (in data units) to the range of the data; this is not
-            % optimal, but OK (optimal would be adjusting it to the plot diameter, but
-            % this value is not known prior to plotting all bars and whiskers, so it would
-            % have to be adjusted after everything is plotted ... which is not impossible,
-            % but would require quite some change, so I might implement this some time
-            % when bored)
-            whiskLen = 0.016 * max(self.histData(:, 1));
+            % adjust tip-width (in data units) to the range of the data (maximum value of
+            % bar-height + stdev); this is not optimal, but OK (optimal would be adjusting
+            % it to the plot diameter, but this value is not known prior to plotting all
+            % bars and whiskers, so it would have to be adjusted after everything is
+            % plotted ... which is not impossible, but would require quite some change, so
+            % I might implement this some time when bored)
+            whiskLen = 0.016 * max(sum(self.histData, 2));
             
             % draw
             nBars = numel(binCentersDeg);
@@ -1407,11 +1465,19 @@ classdef CircHist < handle
             end
             self.barH = findobj(self.polarAxs,'Tag','histBar');
             self.stdH = findobj(self.polarAxs,'Tag','stdWhisk','-or','Tag','stdWhiskEnd');
-            if ~isempty(self.avgAngH) && isvalid(self.avgAngH)
-                uistack(self.avgAngH,'top');
-            end
-            if ~isempty(self.rH) && isvalid(self.rH)
-                uistack(self.rH,'top');
+            
+            % adjust UISTACK-order of graphic elements
+            circH = findobj(self.polarAxs, 'Tag', 'Circ');
+            arrayfun(@uiStackTop, circH); % circles generated by DRAWCIRC
+            uiStackTop(self.avgAngH); % average-angle line
+            arrayfun(@uiStackTop, self.rH); % resultant-vector-length line
+%             uiStackTop(self.rH);
+            
+            
+            function uiStackTop(h)
+                % draw graphics element on top
+                if ~isempty(h) && isvalid(h)
+                    uistack(h, 'top'); end
             end
         end
         %% drawBaseLine

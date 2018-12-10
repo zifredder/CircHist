@@ -53,6 +53,17 @@ obj3.setRLim(newLimits);
 drawnow
 fH.Position(3) = 1100; % width
 fH.Position(4) = 500; % height
+%%
+% Alternatively, use the |'baseLineOffset'| property to unify plot appearance:
+upperLim = 20; % new upper rho-axis limit
+obj2.setRLim([0, upperLim]);
+obj3.setRLim([0, upperLim]);
+% (the lower limit of 0 is irrelevant because setting 'baseLineOffset' will overwrite it)
+obj2.polarAxs.RAxis.TickValues = [0, upperLim]; % adjust axis ticks
+obj3.polarAxs.RAxis.TickValues = [0, upperLim];
+% Set the baseline offset to have 40 % of the rho-axis range
+obj2.baseLineOffset = 40;
+obj3.baseLineOffset = 40;
 %% Plot Already-Binned Data
 % Bin the generated multi-sample distribution before plotting.
 %
@@ -77,12 +88,12 @@ CircHist(sAxial, nBins, 'areAxialData', true);
 % Note that now the average angle is indicated by an axis that halves the diagram at this
 % angle.
 %% Draw Arrows
+figure
 rng default
 arrowLen = randn(numel(sDist), 1); % random arrow lengths
 arrowLen = arrowLen / max(arrowLen);
 arrowLen = arrowLen + abs(min(arrowLen));
-figure
-obj4 = CircHist([1, 2], 36); % dummy data
+obj4 = CircHist([1, 2], 36, 'baseLineOffset', 0); % dummy data
 delete([obj4.avgAngH; obj4.avgAngCiH(:); obj4.barH(:); obj4.rH]); % remove dummy data to get an empty plot
 title('');
 obj4.scaleBar.Label.String = 'Vector length';
@@ -95,6 +106,8 @@ set(arrowH, 'HeadStyle', 'plain', 'HeadWidth', 3)
 % Draw a single arrow that ends at the outer plot edge
 avgAng = circ_mean(deg2rad(sDist), arrowLen); % average angle, weighted by arrow length
 obj4.drawArrow(rad2deg(avgAng), [], 'Color', 'r', 'LineWidth', 3) % by specifying the second argument as empty, the arrow automatically ends at the plot edge
+%%
+drawnow % (Necessary for publishing this script, for whatever reason)
 %% Enable Tab Auto-Completion for Object Construction
 % If |functionSignatures.json| is located in the same directory as the |@CircHist| folder,
 % Name-Value pairs of the object-constructor call can be auto-completed as it is the case
