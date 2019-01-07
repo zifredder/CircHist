@@ -424,6 +424,7 @@ classdef CircHist < handle
             def.colorAvgAngCi  = 'k';
             def.fontSize       = 13;
             def.scaleBarSide   = 'left';
+            def.UserData       = [];
             
             pr = inputParser;
             pr.FunctionName = 'CircHist';
@@ -460,6 +461,7 @@ classdef CircHist < handle
             addParameter(pr,'colorR',     def.colorR,     validColor);
             addParameter(pr,'colorAvgAngCi',def.colorAvgAngCi,validColor);
             addParameter(pr,'fontSize',   def.fontSize,   validScalarNum);
+            addParameter(pr,'UserData',   def.UserData);
             
             parse(pr,data,varargin{:});
             
@@ -504,6 +506,7 @@ classdef CircHist < handle
             colorAvgAngCi       = self.colorAvgAngCi;
             self.fontSize       = pr.Results.fontSize;
             fontSize            = self.fontSize;
+            self.UserData       = pr.Results.UserData;
             
             self.arrowH         = gobjects(0); % empty handle array
             %% validate HISTTYPE-BINSIZESEC combination
