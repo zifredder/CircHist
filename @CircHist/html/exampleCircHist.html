@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2018-12-10"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
+      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-02-05"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -93,14 +93,19 @@ rticks(0:4:20); <span class="comment">% change rho-axis tick-steps</span>
 obj1.drawScale; <span class="comment">% update scale bar</span>
 </pre><img vspace="5" hspace="5" src="exampleCircHist_02.png" alt=""> <h2 id="4">Plot Multi-Sample Distribution</h2><p>Generate another noisy sample with a different distribution-width <tt>kappa</tt>.</p><pre class="codeinput">rng <span class="string">default</span>
 s2Dist = mod(rad2deg(circ_vmrnd(pi/2, 1.5, 100)), 360);
-sCell = {sDist, s2Dist}; <span class="comment">% pack both samples into a cell-array</span>
+sMultiDist = {sDist, s2Dist}; <span class="comment">% pack both samples into a cell-array</span>
 figure
-CircHist(sCell, nBins);
-</pre><img vspace="5" hspace="5" src="exampleCircHist_03.png" alt=""> <h2 id="5">Combine Multiple Histograms in One Figure</h2><p>Create subplot, note that the created <tt>axes</tt> must be a <tt>polaraxes</tt>.</p><pre class="codeinput">fH = figure;
+CircHist(sMultiDist, nBins);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_03.png" alt=""> <h2 id="5">Combine Multiple Histograms in One Figure</h2><p>Create subplot, note that the created subplot <tt>axes</tt> must be <tt>polaraxes</tt>.</p><pre class="codeinput">nBins2 = 18; <span class="comment">% Use different number of bins, resulting in 20&deg;-bins</span>
+fH = figure;
 subAx1 = subplot(1, 2, 1, polaraxes);
 subAx2 = subplot(1, 2, 2, polaraxes);
-obj2 = CircHist(sDist, nBins, <span class="string">'ax'</span>, subAx1);
-obj3 = CircHist(s2Dist, nBins, <span class="string">'ax'</span>, subAx2);
+obj2 = CircHist(sDist, nBins2, <span class="string">'ax'</span>, subAx1);
+obj3 = CircHist(s2Dist, nBins2, <span class="string">'ax'</span>, subAx2);
+thetaticks(obj2.polarAxs, 0:20:360);
+obj2.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(obj3.polarAxs, 0:20:360);
+obj3.polarAxs.ThetaAxis.MinorTickValues = [];
 <span class="comment">% Make rho-axes equal for both diagrams</span>
 maxRho = max([max(rlim(subAx1)), max(rlim(subAx2))]);
 newLimits = [min(rlim(subAx1)), maxRho];
@@ -108,8 +113,7 @@ obj2.setRLim(newLimits);
 obj3.setRLim(newLimits);
 <span class="comment">% Adjust figure-window size</span>
 drawnow
-fH.Position(3) = 1100; <span class="comment">% width</span>
-fH.Position(4) = 500; <span class="comment">% height</span>
+fH.Position([3,4]) = [850,500]; <span class="comment">% Figure dimensions</span>
 </pre><img vspace="5" hspace="5" src="exampleCircHist_04.png" alt=""> <p>Alternatively, use the <tt>'baseLineOffset'</tt> property to unify plot appearance:</p><pre class="codeinput">upperLim = 20; <span class="comment">% new upper rho-axis limit</span>
 obj2.setRLim([0, upperLim]);
 obj3.setRLim([0, upperLim]);
@@ -140,6 +144,7 @@ obj4.scaleBar.Label.String = <span class="string">'Vector length'</span>;
 obj4.polarAxs.ThetaAxis.MinorTickValues = [];
 thetaticks(0:90:360);
 arrowH = obj4.drawArrow(sDist, arrowLen);
+obj4.drawScale; <span class="comment">% update scale</span>
 </pre><img vspace="5" hspace="5" src="exampleCircHist_08.png" alt=""> <p>Change visual properties and add another arrow.</p><pre class="codeinput">set(arrowH, <span class="string">'HeadStyle'</span>, <span class="string">'plain'</span>, <span class="string">'HeadWidth'</span>, 3)
 <span class="comment">% Draw a single arrow that ends at the outer plot edge</span>
 avgAng = circ_mean(deg2rad(sDist), arrowLen); <span class="comment">% average angle, weighted by arrow length</span>
@@ -183,16 +188,21 @@ obj1.drawScale; % update scale bar
 % Generate another noisy sample with a different distribution-width |kappa|.
 rng default
 s2Dist = mod(rad2deg(circ_vmrnd(pi/2, 1.5, 100)), 360);
-sCell = {sDist, s2Dist}; % pack both samples into a cell-array
+sMultiDist = {sDist, s2Dist}; % pack both samples into a cell-array
 figure
-CircHist(sCell, nBins);
+CircHist(sMultiDist, nBins);
 %% Combine Multiple Histograms in One Figure
-% Create subplot, note that the created |axes| must be a |polaraxes|.
+% Create subplot, note that the created subplot |axes| must be |polaraxes|.
+nBins2 = 18; % Use different number of bins, resulting in 20°-bins
 fH = figure;
 subAx1 = subplot(1, 2, 1, polaraxes);
 subAx2 = subplot(1, 2, 2, polaraxes);
-obj2 = CircHist(sDist, nBins, 'ax', subAx1);
-obj3 = CircHist(s2Dist, nBins, 'ax', subAx2);
+obj2 = CircHist(sDist, nBins2, 'ax', subAx1);
+obj3 = CircHist(s2Dist, nBins2, 'ax', subAx2);
+thetaticks(obj2.polarAxs, 0:20:360);
+obj2.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(obj3.polarAxs, 0:20:360);
+obj3.polarAxs.ThetaAxis.MinorTickValues = [];
 % Make rho-axes equal for both diagrams
 maxRho = max([max(rlim(subAx1)), max(rlim(subAx2))]);
 newLimits = [min(rlim(subAx1)), maxRho];
@@ -200,8 +210,7 @@ obj2.setRLim(newLimits);
 obj3.setRLim(newLimits);
 % Adjust figure-window size
 drawnow
-fH.Position(3) = 1100; % width
-fH.Position(4) = 500; % height
+fH.Position([3,4]) = [850,500]; % Figure dimensions
 %%
 % Alternatively, use the |'baseLineOffset'| property to unify plot appearance:
 upperLim = 20; % new upper rho-axis limit
@@ -249,6 +258,7 @@ obj4.scaleBar.Label.String = 'Vector length';
 obj4.polarAxs.ThetaAxis.MinorTickValues = [];
 thetaticks(0:90:360);
 arrowH = obj4.drawArrow(sDist, arrowLen);
+obj4.drawScale; % update scale
 %%
 % Change visual properties and add another arrow.
 set(arrowH, 'HeadStyle', 'plain', 'HeadWidth', 3)

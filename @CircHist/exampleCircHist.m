@@ -34,16 +34,21 @@ obj1.drawScale; % update scale bar
 % Generate another noisy sample with a different distribution-width |kappa|.
 rng default
 s2Dist = mod(rad2deg(circ_vmrnd(pi/2, 1.5, 100)), 360);
-sCell = {sDist, s2Dist}; % pack both samples into a cell-array
+sMultiDist = {sDist, s2Dist}; % pack both samples into a cell-array
 figure
-CircHist(sCell, nBins);
+CircHist(sMultiDist, nBins);
 %% Combine Multiple Histograms in One Figure
-% Create subplot, note that the created |axes| must be a |polaraxes|.
+% Create subplot, note that the created subplot |axes| must be |polaraxes|.
+nBins2 = 18; % Use different number of bins, resulting in 20 deg bins
 fH = figure;
 subAx1 = subplot(1, 2, 1, polaraxes);
 subAx2 = subplot(1, 2, 2, polaraxes);
-obj2 = CircHist(sDist, nBins, 'ax', subAx1);
-obj3 = CircHist(s2Dist, nBins, 'ax', subAx2);
+obj2 = CircHist(sDist, nBins2, 'ax', subAx1);
+obj3 = CircHist(s2Dist, nBins2, 'ax', subAx2);
+thetaticks(obj2.polarAxs, 0:20:360);
+obj2.polarAxs.ThetaAxis.MinorTickValues = [];
+thetaticks(obj3.polarAxs, 0:20:360);
+obj3.polarAxs.ThetaAxis.MinorTickValues = [];
 % Make rho-axes equal for both diagrams
 maxRho = max([max(rlim(subAx1)), max(rlim(subAx2))]);
 newLimits = [min(rlim(subAx1)), maxRho];
@@ -51,8 +56,7 @@ obj2.setRLim(newLimits);
 obj3.setRLim(newLimits);
 % Adjust figure-window size
 drawnow
-fH.Position(3) = 1100; % width
-fH.Position(4) = 500; % height
+fH.Position([3,4]) = [850,500]; % Figure dimensions
 %%
 % Alternatively, use the |'baseLineOffset'| property to unify plot appearance:
 upperLim = 20; % new upper rho-axis limit
@@ -100,6 +104,7 @@ obj4.scaleBar.Label.String = 'Vector length';
 obj4.polarAxs.ThetaAxis.MinorTickValues = [];
 thetaticks(0:90:360);
 arrowH = obj4.drawArrow(sDist, arrowLen);
+obj4.drawScale; % update scale
 %%
 % Change visual properties and add another arrow.
 set(arrowH, 'HeadStyle', 'plain', 'HeadWidth', 3)

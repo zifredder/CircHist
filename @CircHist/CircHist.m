@@ -375,6 +375,10 @@ classdef CircHist < handle
         UserData        % Variable of arbitrary type and size; initialized as [].
     end
     
+    properties (Access = private, Constant)
+       reducePlotSzFrac = 0.85 % Factor by which the OUTERPOSITION of the axes is changed in order to make room for the scale bar
+    end
+    
     methods
         %% constructor
         function self = CircHist(data,varargin)   
@@ -687,13 +691,19 @@ classdef CircHist < handle
             polarAxs.Tag = 'Polar';
             
             polarAxs.Units = 'normalized';
-            % decrease axes-dimensions to provide room for the scale bar
-            polarAxs.Position(3) = polarAxs.Position(3) * 0.95;
-            polarAxs.Position(4) = polarAxs.Position(4) * 0.95;
+            
+            % apply position reduction in order to make room for the scale bar
+            outerPos = polarAxs.OuterPosition;
+            
+            reduceHeightVal = outerPos(4) * (1-self.reducePlotSzFrac);
+            polarAxs.OuterPosition(3) = outerPos(3) * self.reducePlotSzFrac;
+            polarAxs.OuterPosition(4) = outerPos(4) - reduceHeightVal;
+            polarAxs.OuterPosition(2) = outerPos(2) + reduceHeightVal/2;
+            
             self.scaleBarSide = scaleBarSide;
                         
             lineSp = '-'; % continuous lines
-            self.barWidth = adjustSlope * binSizeDeg + 4; % bar width
+            self.barWidth = adjustSlope * binSizeDeg + 2; % bar width
             self.stdWidth = self.barWidth / 3;
             lineWAvgAng = adjustSlope * binSizeDeg/10 + 2;
             lineWR = lineWAvgAng * 1.5;
@@ -811,13 +821,6 @@ classdef CircHist < handle
             colormap(polarAxs,white); % for axis appearance
             polarAxs.RTickLabel = [];
             
-            if isempty(ax) % adjust figure-window size
-                figH.OuterPosition(1) = figH.OuterPosition(1)/2; 
-                figH.OuterPosition(2) = figH.OuterPosition(2)/2;
-                figH.OuterPosition(3) = figH.OuterPosition(3)*1.2;
-                figH.OuterPosition(4) = figH.OuterPosition(4)*1.5;
-            end
-            
             self.drawScale;
             figH.SizeChangedFcn = @self.redrawScale;
             % automatically DELETE object if the polaraxes is deleted
@@ -834,6 +837,9 @@ classdef CircHist < handle
             % drawn each time the figure size is changed. The scale bar is actually a
             % colorbar-object, thus it does not behave as neat as a conventional axis.
             
+            % set this flag to TRUE in order to plot lines showing the axes positioning
+            debug = false;
+            
             scl = self.scaleBar;
             % non-empty and non-valid if the scale bar has been deleted
             if ~isempty(scl) && ~isvalid(scl), return; end
@@ -841,54 +847,33 @@ classdef CircHist < handle
             figVisibleState = self.figH.Visible;
             self.figH.Visible = 'off'; % as recommended for SizeChangedFcn operations
             pAx = self.polarAxs;
-                        
-            sclLeft = strcmp(self.scaleBarSide,'left');
-
-            % default font size. This line should be completely useless, but for some
-            % reason, there are strange effects without it. The fact that the bar-drawing
-            % is executed via SIZECHANGEDFCN seems to interrupt the link between the font
-            % properties of the bar and the font properties of the parent axes, messing
-            % something up.
-            fontsz = 13; %#ok
 
             initialDraw = isempty(scl);
-            if initialDraw % if the bar is drawn for the first time, use predefined label and font size
-                hasLabel = true;
-                label = self.axisLabel;
-                fontsz = self.fontSize;
-            else % read out (assumingly predefined) properties and use these for the next drawing
-                hasLabel = ~isempty(scl.Label);
-                if hasLabel, label  = scl.Label.String;
-                             fontsz = scl.Label.FontSize;
-                else,        label  = '';
-                             fontsz = self.fontSize;
-                end
-                oldLineWidth = scl.LineWidth;
+            if initialDraw % create
+                scl = colorbar(pAx,'Location','east');
+                self.scaleBar = scl;
+                scl.Label.String = self.axisLabel;
+                scl.FontSize = self.fontSize;
+                scl.AxisLocation = 'out';
+                
+                % with this link, the label font-name is changed with the corresponding
+                % axes-property using set(gca,'FontName',fontName), which is the default
+                % behavior of regular colorbar labels
+                pAx.UserData.fontNameLink = linkprop([pAx,scl],'FontName');
+                scl.Box = 'off';
+                scl.TickLength = 0.04;
             end
-            
-            delete(scl); % deletes the previous bar
-            
-            scl = colorbar(pAx,'Location','east');
-            self.scaleBar = scl; % re-assign
-            
-            % with this link, the label font-name is changed with the corresponding
-            % axes-property using set(gca,'FontName',fontName), which is the default
-            % behavior of regular colorbar labels.
-            pAx.UserData.fontNameLink = linkprop([pAx,scl],'FontName');
             
             sclUnitsOld = scl.Units;
             scl.Units = 'pixels';
             polarAxsUnitsOld = pAx.Units;
             pAx.Units = 'pixels';
             
-            sclWidth = 0.015;
-            
             polarPos = pAx.Position; % position property == [left,bottom,width,height]
             polarLeft   = polarPos(1);
             polarBot    = polarPos(2);
             polarWidth  = polarPos(3);
             polarHeight = polarPos(4);
-            polarRight  = polarLeft + polarWidth;                        
             
             % this works because the plot-area is always a square, thus the lower value of
             % the dimensions equals the plot-circle diameter
@@ -903,56 +888,108 @@ classdef CircHist < handle
             % adjust scale-height to theta-offset (scale starts at 0)
             lowerLim = pAx.RLim(1);
             if lowerLim < 0, offset = sclHeight * abs(lowerLim)/range(pAx.RLim);
+                             sideOffsetFrac = 0.15;
             else,            offset = 0;
+                             sideOffsetFrac = 0.20;
             end
             sclHeight = sclHeight - offset;
             
             % calculate bottom-position of scale bar
             sclBot = polarBot + polarHeight - polarHeightOffset - sclHeight;
             
-            % use the margins between plot-area and axis-labels to adjust the
-            % scale-bar left-position
-            aBit = 10; % just a tiny little bit of space
-            if sclLeft
-                polarEdge = polarLeft;  sideMarg = pAx.TightInset(1) - sclWidth; sclSideSign = -1;
-            else
-                polarEdge = polarRight; sideMarg = pAx.TightInset(3) + sclWidth; sclSideSign = +1;
+            if strcmp(self.scaleBarSide,'left'), sclSideSign = -1;
+            else,                                sclSideSign = +1;
             end
-            botMarg = pAx.TightInset(2); % margin at bottom
-            % a margin > 0 means that there is no space beyond the axis labels, so the
-            % scale-bar must be located at the border of the labels. A side margin == 0
-            % means that there is (excess) space, but because the plot-area automatically
-            % resizes to be a square, the bottom margin gives information about the actual
-            % side margin, so the scale-bar is placed at the side border of the plot plus
-            % the bottom margin.
-            if sideMarg > 0, sclLeft = polarEdge + sclSideSign * (sideMarg + aBit);
-            else
-                sclLeft = pAx.OuterPosition(3)/2 ... % mid-line of axes-area
-                    + (sclSideSign * polarPlotDiam)/2 ... % +/- radius of plot
-                    + sclSideSign * (botMarg + aBit); % +/- (margin + a bit more)
-            end
+            
+            % always keep a fixed, relative offset-space between the plot side-edge and
+            % the scale bar position. If there is no baseline offset in the plot center,
+            % the theta-axis labels might overlap, so the offset-space is larger (see
+            % above).
+            sideOffset = sclSideSign * polarPlotDiam * sideOffsetFrac; % fraction of the plot diameter
+            polarMid = polarLeft + polarWidth/2;
+            polarRadius = sclSideSign * polarPlotDiam/2;
+            
+            sclLeft = polarMid ... % mid-line of axes-area
+                + polarRadius ... % +/- radius of plot
+                + sideOffset; % +/- offset
+            
+            % width of zero removes the part of the scale where the color
+            % of the colorbar would be; thus, only the scale itself remains
+            sclWidth = 0;
+            
+            % set/update position
             scl.Position = [sclLeft,sclBot,sclWidth,sclHeight];
 
-            if hasLabel, scl.Label.String = label; end
+            % set/update ticks
             lowerLimScl = lowerLim;
             if lowerLimScl < 0, lowerLimScl = 0; end
             scl.Limits = [lowerLimScl,max(pAx.RLim)];
             sclTicks = pAx.RTick; % use same ticks as present in the POLARAXES
             sclTicks = sclTicks(sclTicks >= lowerLimScl);
             scl.Ticks = sclTicks;
-            scl.Box = 'off';
-            scl.TickLength = 0.04;
-            scl.FontSize = fontsz;
+            
+            
+            % DEBUG
+            if isfield(pAx.UserData,'DEBUG') %#ok<UNRCH>
+                structfun(@delete, pAx.UserData.DEBUG);
+            end
+            if debug
+                outPos = pAx.OuterPosition;
+                pAx.UserData.DEBUG.rectOutPos = annotation(self.figH, 'rectangle', ...
+                    'units', 'pixels', 'position', outPos, 'color', 'r');
+                pAx.UserData.DEBUG.rectOutTxt = annotation(self.figH, 'textbox', ...
+                    'units', 'pixels', 'position', [outPos(1),outPos(2),0,0], 'color', 'r', ...
+                    'edgecolor', 'none', 'string', [num2str(outPos(3)),'\times',num2str(outPos(4))], ...
+                    'VerticalAlignment', 'bottom');
+                pAx.UserData.DEBUG.rectOutTop = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [0,outPos(2)+outPos(4),3000,0], 'linestyle', '--', 'color', 'r');
+                pAx.UserData.DEBUG.rectOutBot = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [0,outPos(2),3000,0], 'linestyle', '--', 'color', 'r');
+                pAx.UserData.DEBUG.rectOutLeft = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [outPos(1),0,0,3000], 'linestyle', '--', 'color', 'r');
+                pAx.UserData.DEBUG.rectOutRight = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [outPos(1)+outPos(3),0,0,3000], 'linestyle', '--', 'color', 'r');
+                midOutPosX = outPos(1) + outPos(3)/2;
+                pAx.UserData.DEBUG.midOutPos = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [midOutPosX,outPos(2),0,outPos(4)], 'color', 'r');
+                
+                pos = pAx.Position;
+                pAx.UserData.DEBUG.rectPos = annotation(self.figH, 'rectangle', ...
+                    'units', 'pixels', 'position', pos, 'color', 'b');
+                pAx.UserData.DEBUG.rectTxt = annotation(self.figH, 'textbox', ...
+                    'units', 'pixels', 'position', [pos(1),pos(2),0,0], 'color', 'b', ...
+                    'edgecolor', 'none', 'string', [num2str(pos(3)),'\times',num2str(pos(4))], ...
+                    'VerticalAlignment', 'bottom');
+                pAx.UserData.DEBUG.rectTop = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [0,pos(2)+pos(4),3000,0], 'linestyle', '--', 'color', 'b');
+                pAx.UserData.DEBUG.rectBot = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [0,pos(2),3000,0], 'linestyle', '--', 'color', 'b');
+                pAx.UserData.DEBUG.rectLeft = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [pos(1),0,0,3000], 'linestyle', '--', 'color', 'b');
+                pAx.UserData.DEBUG.rectRight = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [pos(1)+pos(3),0,0,3000], 'linestyle', '--', 'color', 'b');
+                pAx.UserData.DEBUG.midPos = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [polarMid,pos(2),0,pos(4)], 'color','b');
+                pAx.UserData.DEBUG.sclLeft = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [sclLeft,pos(2),0,pos(4)], 'color', [1,1,1]*0.5, 'linestyle', '--');
+                pAx.UserData.DEBUG.sclBot = annotation(self.figH, 'line', ...
+                    'units', 'pixels', 'position', [sclLeft,sclBot,pos(3)*-sclSideSign,0], 'color', [1,1,1]*0.5, 'linestyle', '--');
+                yAr = polarBot + 0.75*polarHeight;
+                pAx.UserData.DEBUG.ar1 = annotation(self.figH, 'textarrow', ...
+                    'units', 'pixels', 'position', [polarMid,yAr,polarRadius,0], 'string', polarRadius, 'verticalalignment','bottom','color', 'k');
+                pAx.UserData.DEBUG.ar2 = annotation(self.figH, 'textarrow', ...
+                    'units', 'pixels', 'position', [polarMid+polarRadius,yAr,sideOffset,0], 'string', sideOffset,'verticalalignment','bottom','color', 'k');
+            end
+            %
+            
             
             scl.Units = sclUnitsOld;
             pAx.Units = polarAxsUnitsOld;
             
-            if ~initialDraw
-                scl.LineWidth = oldLineWidth;
-            end
             % restore initial state of visibility
             self.figH.Visible = figVisibleState;
         end
+        
         %% change scale limits
         function setRLim(self,limits)
             %setRLim Change scale limits specified by the two-element vector LIMITS ==
@@ -1088,23 +1125,29 @@ classdef CircHist < handle
             if strcmpi(side, self.scaleBarSide), return; end % nothing to do
             
             pAx = self.polarAxs;
+            unitsOld = pAx.Units;
+            pAx.Units = 'normalized';
+            
             isLeft = strcmpi(side, 'left');
             
-            % initially, the plot is not positioned in the center of the axes, but
-            % slightly right, and there seems to be no way to center it, so the first
-            % adjustment needs to be different from subsequent adjustments
-            if isempty(self.scaleBarSide) % first call during construction
-                if isLeft, offset = 0.05; else, offset = -0.05; end
-            else
-                if isLeft, offset = 0.1;  else, offset = -0.1; end
+            % first call during construction: left edge of OUTERPOSITION already is at the
+            % left side, so no adjustment is needed for a right-side scalebar
+            isInit = isempty(self.scaleBarSide);
+            if isInit && ~isLeft
+                offset = 0;
+            else % calculate the distance by which the width was decreased
+                offset = (1 - self.reducePlotSzFrac) / self.reducePlotSzFrac * pAx.OuterPosition(3);
             end
             
-            self.scaleBarSide = side;
-            unitsOld = pAx.Units;
-            pAx.Units = 'normalized';            
-            pAx.Position(1) = pAx.Position(1) + offset;
+            if isLeft, offsetSign = 1;  else, offsetSign = -1; end
+            
+            pAx.OuterPosition(1) = pAx.OuterPosition(1) + offset * offsetSign;
+            
             pAx.Units = unitsOld;
-            if ~isempty(self.scaleBar) && isvalid(self.scaleBar), self.drawScale; end
+            
+            self.scaleBarSide = side;
+            
+            if ~isInit && ~isempty(self.scaleBar) && isvalid(self.scaleBar), self.drawScale; end
         end
         %% baseLineOffset
         function set.baseLineOffset(self, ofsPcnt)
