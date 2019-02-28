@@ -318,6 +318,16 @@ classdef CircHist < handle
     % See also CircStat polaraxes polarplot thetatickformat thetaticks rticks thetalim
     % uistack
     
+    %% TODO
+    % Add input parameter 'drawScale', true|false, which defines a priori whether the
+    % scale should be drawn. If not, the plot area will not be rescaled to make room for
+    % the bar. Also, if this property is changed after construction, adjust the plot size
+    % accordingly: If it is turned on, decrease the size and draw the bar. If it is turned
+    % off, increase the size (trying to restore the original POSITION will probably be
+    % hard to impossible) and DELETE the scalebar; also, set drawScale to false when the
+    % scalebar is DELETED.
+    %%
+    
     properties (SetAccess = immutable)
         data            % Required input: Data in degree.
         edges           % Required input: Histogram-bin edges or number of histogram-bins.
@@ -434,7 +444,7 @@ classdef CircHist < handle
             pr.FunctionName = 'CircHist';
             
             addRequired(pr,'data' ...
-                ,@(x) validateattributes(x,{'numeric','cell'},{'nonempty'}));
+                ,@(x) validateattributes(x,{'numeric','cell'}, {'2d'}));
             addOptional(pr,'edges',def.edges ...
                 ,@(x) validateattributes(x,{'numeric'},{'vector','increasing'}));
             
@@ -519,7 +529,7 @@ classdef CircHist < handle
             end
             %% validate that input data match DATATYPE
             if areDistribData
-                assert(isvector(data) || all(cellfun(@(c)isvector(c) && isnumeric(c),data))...
+                assert(isempty(data) || isvector(data) || all(cellfun(@(c)isvector(c) && isnumeric(c),data))...
                     ,['For distribution-data, input variable must be either a cell' ...
                     ,' array of samples or a single vector of samples.']);
             else, assert(isvector(data) || size(data,2) <= 2 ...
@@ -537,9 +547,11 @@ classdef CircHist < handle
             
             %% operations on input data based on dataType
             if areDistribData
-                if isnumeric(data) % if it is only a vector, pack it into a cell
-                    validateattributes(data,{'numeric'},{'vector'});
+                if isnumeric(data) % columnize numeric vector and pack into a cell
                     data = {data(:)};
+                else % Columnize vectors in cell
+                    data = cellfun(@(vec) reshape(vec, [], 1), data, ...
+                        'UniformOutput', false);
                 end
                 % wrap angles into [0,360[, necessary for correct binning
                 data = cellfun(@(c)mod(c,360),data,'UniformOutput',false);
@@ -553,6 +565,10 @@ classdef CircHist < handle
                         ,'second input argument EDGES must be specified.']);
                     % use sample with highest number of data points for auto-binning
                     idxMostData = find(max(cellfun(@numel,data)));
+                    
+                    % in case DATA is empty
+                    if isempty(idxMostData), idxMostData = 1; end
+                    
                     [~,edges] = histcounts(data{idxMostData}); %#ok<FNDSB>
                 end
                 
@@ -576,24 +592,46 @@ classdef CircHist < handle
                 % calculate means and standard deviations
                 histData(:,1) = mean(binnedData,2);
                 histData(:,2) = std(binnedData,0,2);
+                
                 % avgAng, r, rayleigh
                 degPool = vertcat(data{:}); % column-vector of all data points
-                radPool = deg2rad(degPool);
-                if isempty(avgAng)
-                    self.avgAng = mod(rad2deg(circ_mean(axTrans(radPool))),360) /axialDim;
-                    avgAng      = self.avgAng;
-                end
-                if isempty(r)
-                    self.r = circ_r(axTrans(radPool));
-                    r      = self.r;
-                end
-                if isempty(avgAngCi)
-                    self.avgAngCi = ...
-                        rad2deg(circ_confmean(axTrans(radPool),0.05)) / axialDim;
-                    avgAngCi      = self.avgAngCi;
+                
+                if numel(degPool) < 2
+                    % Empty data input or only one sample -> statistics == NaN
+                    self.avgAng    = nan;
+                    avgAng         = self.avgAng;
+                    
+                    self.avgAngCi  = nan;
+                    avgAngCi       = self.avgAngCi;
+                    
+                    self.r         = nan;
+                    r              = self.r;
+                    
+                    self.rayleighP = nan;
+                    self.rayleighZ = nan;
+                else
+                    radPool = deg2rad(degPool);
+                    
+                    if isempty(avgAng)
+                        self.avgAng = mod(rad2deg(circ_mean(axTrans(radPool))),360) /axialDim;
+                        avgAng      = self.avgAng;
+                    end
+                    
+                    if isempty(r)
+                        self.r = circ_r(axTrans(radPool));
+                        r      = self.r;
+                    end
+                    
+                    if isempty(avgAngCi)
+                        self.avgAngCi = ...
+                            rad2deg(circ_confmean(axTrans(radPool),0.05)) / axialDim;
+                        avgAngCi      = self.avgAngCi;
+                    end
+                    
+                    [self.rayleighP,self.rayleighZ] = circ_rtest(axTrans(radPool));
+                    
                 end
                 
-                [self.rayleighP,self.rayleighZ] = circ_rtest(axTrans(radPool));
                 pRayl = self.rayleighP;
                 zRayl = self.rayleighZ;
                 
@@ -761,6 +799,7 @@ classdef CircHist < handle
                 
                 whiskWidthEnd = self.stdWidth * 0.7; % width of whisker-endings
                 thetaStepN = ceil(avgAngCi / 0.2); % plot line in 0.2-deg-steps
+                if thetaStepN == 0, thetaStepN = 1; end
                 thetaAvgAngCi = linspace( ...
                     avgAngRad - avgAngCiRad,avgAngRad + avgAngCiRad,thetaStepN);
                 
