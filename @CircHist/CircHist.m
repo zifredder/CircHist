@@ -335,15 +335,9 @@ classdef CircHist < handle
         dataType        % Optional input; 'distribution'(default)/'histogram'.
         histType        % Optional input; 'frequency'(default)/'count'.
         binSizeSec      % Optional input; Width of bins (s).
-        drawAvgAng      % Optional input; True(default)/false.
         avgAng          % Optional input; Numeric value of the average angle.
-        drawAvgAngCi    % Optional input; True(default)/false.
         avgAngCi        % Optional input; Numeric value of the 95 % confidence interval bounds (average +/ bounds).
-        drawR           % Optional input; True(default)/false.
         r               % Optional input; Numeric value of the resultant vector length.
-        
-        adjustSlope     % Optional input; Slope for scaling of visual properties with bin size.
-        areAxialData    % Optional input; True/false(default).
         
         polarAxs        % Handle to POLARAXES that containes the histogram. Change visual properties such as line width of the axes here.
         figH            % Handle to figure in which the histogram is plotted.
@@ -355,18 +349,20 @@ classdef CircHist < handle
         corrAnR         % R-value of correlation analysis (square this to get the coefficient of determination).
     end
     
+    % properties that are settable as Name-Value pairs but cannot be adjusted after
+    % plotting
+    properties (SetAccess = immutable, GetAccess = protected)
+        drawAvgAng      % Optional input; True(default)/false.
+        drawAvgAngCi    % Optional input; True(default)/false.
+        drawR           % Optional input; True(default)/false.
+        adjustSlope     % Optional input; Slope for scaling of visual properties with bin size.
+        areAxialData    % Optional input; True/false(default).
+    end
+    
     properties
-        scaleBar        % Handle of scale bar. Use to access visual properties.
         axisLabel       % Label of scale bar. Can be set using obj.axisLabel = 'new label'.
         scaleBarSide    % Side of the scale bar, either 'left'(default) or 'right'.
         thetaLabel      % Label of the degree-axis (TEXT object).
-        
-        avgAngH         % Handle to the average-angle line.
-        avgAngCiH       % Handle to confidence interval lines.
-        rH              % Handle to the r line.
-        barH            % Array of handles to the bars (LINE objects).
-        stdH            % Array of handles to the standard-deviation whiskers (LINE objects).
-        arrowH          % Array of handles to drawn arrows (ANNOTATION objects).
         
         colorBar        % Optional input; Color of bars (default = [0 .45 .74]; (standard MATLAB blue)).
         colorStd        % Optional input; Color of standard-deviation lines (default = 'k').
@@ -383,6 +379,16 @@ classdef CircHist < handle
         whiteDiskH      % Handles to white bars that obscure the center of the axis.
         
         UserData        % Variable of arbitrary type and size; initialized as [].
+    end
+    
+    properties (SetAccess = private)
+        scaleBar        % Handle of scale bar. Use to access visual properties.
+        avgAngH         % Handle to the average-angle line.
+        avgAngCiH       % Handle to confidence interval lines.
+        rH              % Handle to the r line.
+        barH            % Array of handles to the bars (LINE objects).
+        stdH            % Array of handles to the standard-deviation whiskers (LINE objects).
+        arrowH          % Array of handles to drawn arrows (ANNOTATION objects).
     end
     
     properties (Access = private, Constant)
@@ -705,13 +711,8 @@ classdef CircHist < handle
             end
             hold(polarAxs,'on');
             
-            figVisibleState = figH.Visible;
-            figH.Visible = 'off';
             self.figH = figH;
-%             set(0,'currentfigure',figH);
-%             polarplot(0);hold on
             set(figH,'color',[1,1,1]) % white background
-%             self.polarAxs = gca;
             self.polarAxs = polarAxs;
             
             % self-reference in property for hyper-redundancy (this is actually quite
@@ -865,9 +866,6 @@ classdef CircHist < handle
             % automatically DELETE object if the polaraxes is deleted
             polarAxs.DeleteFcn = @(~,~) delete(self);
             
-            % this preserves the visiblity-state if the histogram is plotted into an
-            % existing axes in an invisible figure.
-            figH.Visible = figVisibleState;
         end
         %%        
         %% drawScale; draw scale bar
@@ -1616,7 +1614,6 @@ classdef CircHist < handle
         function redrawScale(~,~)
             % Called when the figure window-size changes, should not be called manually
             fH = gcbf;
-            set(0,'currentfigure',fH);
             % get all CIRCHIST-objects in this figure via the polaraxes' USERDATA entry
             pAxH = findobj(fH,'-function',@(o)isfield(o.UserData,'circHistObj'));
             if ~isempty(pAxH) % loop through objects, call DRAWSCALE and UPDATEARROWS
