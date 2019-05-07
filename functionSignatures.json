@@ -76,6 +76,11 @@
 				"kind": "namevalue",
 				"type": ["numeric", "scalar"],
 				"purpose": ""
+            }, {
+				"name": "parent",
+				"kind": "namevalue",
+				"type": ["scalar", "matlab.graphics.axis.PolarAxes"],
+				"purpose": "Axes handle to plot diagram into"
 			}, {
 				"name": "ax",
 				"kind": "namevalue",

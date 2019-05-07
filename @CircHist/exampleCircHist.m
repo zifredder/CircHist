@@ -43,8 +43,8 @@ nBins2 = 18; % Use different number of bins, resulting in 20 deg bins
 fH = figure;
 subAx1 = subplot(1, 2, 1, polaraxes);
 subAx2 = subplot(1, 2, 2, polaraxes);
-obj2 = CircHist(sDist, nBins2, 'ax', subAx1);
-obj3 = CircHist(s2Dist, nBins2, 'ax', subAx2);
+obj2 = CircHist(sDist, nBins2, 'parent', subAx1);
+obj3 = CircHist(s2Dist, nBins2, 'parent', subAx2);
 thetaticks(obj2.polarAxs, 0:20:360);
 obj2.polarAxs.ThetaAxis.MinorTickValues = [];
 thetaticks(obj3.polarAxs, 0:20:360);
