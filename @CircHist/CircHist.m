@@ -116,10 +116,13 @@ classdef CircHist < handle
     %   adjustSlope     Slope that defines how strongly optical properties such as bar
     %                   width scale with bin-size; default == 0.3.
     %
-    %   ax              Axes handle to plot diagram into; becomes POLARAXS property. Note
+    %   parent          Axes handle to plot diagram into; becomes POLARAXS property. Note
     %                   that the referenced axes must be a POLARAXES. (Experimental
     %                   feature, working in principle, but the scale sometimes
     %                   misbehaves).
+    %
+    %   ax              Same as 'parent' (legacy). If both are specified, 'parent' takes
+    %                   preference.
     %
     %   colorBar        Color of bars (default == [0 .45 .74]; (standard MATLAB blue)).
     %                   Can be adjusted after plotting by changing the property of the
@@ -318,16 +321,6 @@ classdef CircHist < handle
     % See also CircStat polaraxes polarplot thetatickformat thetaticks rticks thetalim
     % uistack
     
-    %% TODO
-    % Add input parameter 'drawScale', true|false, which defines a priori whether the
-    % scale should be drawn. If not, the plot area will not be rescaled to make room for
-    % the bar. Also, if this property is changed after construction, adjust the plot size
-    % accordingly: If it is turned on, decrease the size and draw the bar. If it is turned
-    % off, increase the size (trying to restore the original POSITION will probably be
-    % hard to impossible) and DELETE the scalebar; also, set drawScale to false when the
-    % scalebar is DELETED.
-    %%
-    
     properties (SetAccess = immutable)
         data            % Required input: Data in degree.
         edges           % Required input: Histogram-bin edges or number of histogram-bins.
@@ -422,6 +415,10 @@ classdef CircHist < handle
                 && (islogical(tf) || isnumeric(tf) && ismember(tf,[0,1]));
             validScalarNum = @(N) isscalar(N) && isnumeric(N);
             
+            validAx = @(h) assert(isscalar(h) && ...
+                isa(h, 'matlab.graphics.axis.PolarAxes') && isvalid(h), ...
+                'Target axes must be a scalar handle to a valid POLARAXES.');
+            
             % default values
             def.edges          = [];
             def.dataType       = 'distribution';
@@ -470,8 +467,8 @@ classdef CircHist < handle
             addParameter(pr,'baseLineOffset',def.baseLineOffset,validScalarNum);
             addParameter(pr,'adjustSlope'   ,def.adjustSlope,validScalarNum);
             addParameter(pr,'areAxialData'  ,def.axialData,validLogical01);
-            addParameter(pr,'ax'            ,def.axes ...
-                ,@(x) validateattributes(x,{'matlab.graphics.axis.PolarAxes'},{'scalar'}));
+            addParameter(pr,'ax'            ,def.axes, validAx);
+            addParameter(pr,'parent'        ,def.axes, validAx);
             
             addParameter(pr,'scaleBarSide' ...
                 ,def.scaleBarSide,@(str) any(strcmpi(str,{'left','right'})));
@@ -513,7 +510,11 @@ classdef CircHist < handle
             adjustSlope         = self.adjustSlope;
             self.areAxialData   = pr.Results.areAxialData;
             areAxialData        = self.areAxialData;
+            
             ax                  = pr.Results.ax;
+            parent              = pr.Results.parent;
+            if ~isempty(parent), ax = parent; end
+            
             
             scaleBarSide        = pr.Results.scaleBarSide;
             self.colorBar       = pr.Results.colorBar;
@@ -701,13 +702,17 @@ classdef CircHist < handle
             % initialize theta-label
             self.thetaLabel = text; % empty
             
-            if ~isempty(ax) && isvalid(ax)
+            if ~isempty(ax) % target axes specified
                 figH = ax.Parent;
                 polarAxs = ax;
-            else
+            else % choose current figure and axes
                 figH = gcf;
-                polarplot(0);
                 polarAxs = gca;
+                % make current axes polaraxes if it is not
+                if ~isa(polarAxs, 'matlab.graphics.axis.PolarAxes')
+                    delete(polarAxs);
+                    polarAxs = polaraxes(figH);
+                end
             end
             hold(polarAxs,'on');
             
