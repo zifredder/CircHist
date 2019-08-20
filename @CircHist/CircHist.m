@@ -240,7 +240,7 @@ classdef CircHist < handle
     %                                   the scale is somewhat messed up (usage:
     %                                   obj.drawScale).
     %
-    %   UserData                        Property with arbitrary type and size. Intended to
+    %   UserData                        Property of arbitrary type and size. Intended to
     %                                   be used to store additional information about the
     %                                   plot.
     %
@@ -333,6 +333,7 @@ classdef CircHist < handle
         r               % Optional input; Numeric value of the resultant vector length.
         
         polarAxs        % Handle to POLARAXES that containes the histogram. Change visual properties such as line width of the axes here.
+        parent          % Same as 'polarAxs'.
         figH            % Handle to figure in which the histogram is plotted.
         
         histData        % Histogram data as plotted; 1st column average counts, 2nd column standard deviations.
@@ -714,6 +715,7 @@ classdef CircHist < handle
                     polarAxs = polaraxes(figH);
                 end
             end
+            self.parent = polarAxs;
             hold(polarAxs,'on');
             
             self.figH = figH;
@@ -1322,12 +1324,16 @@ classdef CircHist < handle
             assert(isnumeric(rho) && isscalar(rho), ...
                 'First input RHO must be a numeric scalar.');
             
-            theta = linspace(0, 2*pi, 100);
-            h = polarplot(self.polarAxs, theta, repmat(rho,size(theta)), ...
-                varargin{:}, 'Tag', 'Circ');
-            
-            if isvalid(self.avgAngH), uistack(self.avgAngH, 'top'); end
-            if isvalid(self.rH),      uistack(self.rH,      'top'); end
+            if isnan(rho)
+                h = gobjects;
+            else
+                theta = linspace(0, 2*pi, 100);
+                h = polarplot(self.polarAxs, theta, repmat(rho,size(theta)), ...
+                    varargin{:}, 'Tag', 'Circ');
+                
+                if isvalid(self.avgAngH), uistack(self.avgAngH, 'top'); end
+                if isvalid(self.rH),      uistack(self.rH,      'top'); end
+            end
             
             if nargout > 0, hOut = h; end
         end
@@ -1335,18 +1341,19 @@ classdef CircHist < handle
         function hOut = drawArrow(self,theta,rho,varargin)
             %drawArrow Draws arrows (ANNOTATION objects) from the center of the plot at
             % the specified angles (in degrees) with the specified lengths (in data
-            % units). To change the arrow properties, pass additional Name-Value pairs as
-            % accepted by annotation('arrow',_,Name,Value). To change properties after
-            % drawing, use obj.arrowH(N).PROPERTY, where N is the index of the arrow
-            % object and PROPERTY is the respective property; alternatively, call this
-            % function with an output argument and use this variable to access the
-            % properties. Note that the arrows are ANNOTATION objects and that their
-            % positional information is anchored in the figure coordinates, not the axes
-            % coordinates, so the position might get messed up if the figure's or axes'
-            % size/orientation/... is changed. In this case, call OBJ.UPDATEARROWS which
-            % should re-position all arrows correctly. Tip: If an arrow is supposed to end
-            % at a specific point on the scale, specify RHO as R+abs(min(rlim)), where R
-            % is the desired point on the scale.
+            % units). Value pairs where any is NaN are ignored. To change the arrow
+            % properties, pass additional Name-Value pairs as accepted by
+            % annotation('arrow',_,Name,Value). To change properties after drawing, use
+            % obj.arrowH(N).PROPERTY, where N is the index of the arrow object and
+            % PROPERTY is the respective property; alternatively, call this function with
+            % an output argument and use this variable to access the properties. Note that
+            % the arrows are ANNOTATION objects and that their positional information is
+            % anchored in the figure coordinates, not the axes coordinates, so the
+            % position might get messed up if the figure's or axes' size/orientation/...
+            % is changed. In this case, call OBJ.UPDATEARROWS which should re-position all
+            % arrows correctly. Tip: If an arrow is supposed to end at a specific point on
+            % the scale, specify RHO as R+abs(min(rlim)), where R is the desired point on
+            % the scale.
             %
             %   Input:
             %       theta       Scalar or vector of angles in degree.
@@ -1384,6 +1391,15 @@ classdef CircHist < handle
             if    isscalar(rho) || isempty(rho), rho = repmat(rho,size(theta));
             else, assert(numel(rho) == nAr,['If RHO is not a scalar, it must' ...
                     ,' have the same number of elements as THETA.']);
+                  rho = rho(:);
+            end
+            
+            % remove NaNs
+            rmNan = isnan(theta) | isnan(rho); % TRUE where either is NaN
+            if any(rmNan)
+                theta = theta(~rmNan);
+                rho = rho(~rmNan);
+                nAr = nnz(~rmNan);
             end
             
             % get center coordinates and radius of polar plot
