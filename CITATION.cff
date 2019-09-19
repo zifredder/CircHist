@@ -1,0 +1,27 @@
+cff-version: 1.0.3
+message: If you use this software, please cite it both the software and the reference included here.
+title: 'CircHist: Circular histogram in MATLAB'
+doi: 10.5281/zenodo.3445084
+authors:
+- given-names: Frederick
+  family-names: Zittrell
+  affiliation: Marburg University
+version: '1.3'
+keywords: [circular histogram, polar histogram, angular histogram, MATLAB, circular statistics]
+date-released: 2019-09-18
+repository-code: https://github.com/zifredder/CircHist
+license: other-open
+references:
+- type: article
+  scope: Cite this paper in order to refernce circular statistics and their MATLAB implementations.
+  authors:
+   - family-names: Berens
+     given-names: Philipp
+  title: CircStat: A MATLAB toolbox for circular statistics
+  year: 2009
+  volume: 31
+  issue: 10
+  journal: Journal of Statistical Software
+  doi: 10.18637/jss.v031.i10
+  url: https://doi.org/10.18637/jss.v031.i10
+  repository-code: https://github.com/circstat/circstat-matlab
