@@ -290,8 +290,10 @@ classdef CircHist < handle
     %   * Consider creating a new figure for each histogram because there may be
     %     side-effects regarding the axis and the scale bar if the same axes-object or
     %     figure-window are used. When plotting multiple histograms into the same figure
-    %     by using the 'ax' Name-Value pair, expect issues such as overlapping graphical
-    %     elements.
+    %     by using the 'parent' Name-Value pair, expect issues such as overlapping
+    %     graphical elements. If single histograms should be contained in UIPANELs, the
+    %     UIPANEL objects need to be created in advance, then a POLARAXES must be created
+    %     in the panel and this axes must be specified as the histogram's 'parent'.
     %
     %   * To change the angle-axis units into radians, call
     %     obj.polarAxs.ThetaAxisUnits = 'radians';
@@ -704,7 +706,7 @@ classdef CircHist < handle
             self.thetaLabel = text; % empty
             
             if ~isempty(ax) % target axes specified
-                figH = ax.Parent;
+                figH = ancestor(ax, 'figure', 'toplevel');
                 polarAxs = ax;
             else % choose current figure and axes
                 figH = gcf;
