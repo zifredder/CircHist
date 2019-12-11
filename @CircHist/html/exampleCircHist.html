@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.6"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-08-20"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
+      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.7"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-12-11"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -114,15 +114,14 @@ obj3.setRLim(newLimits);
 <span class="comment">% Adjust figure-window size</span>
 drawnow
 fH.Position([3,4]) = [850,500]; <span class="comment">% Figure dimensions</span>
-</pre><img vspace="5" hspace="5" src="exampleCircHist_04.png" alt=""> <p>Alternatively, use the <tt>'baseLineOffset'</tt> property to unify plot appearance:</p><pre class="codeinput">upperLim = 20; <span class="comment">% new upper rho-axis limit</span>
-obj2.setRLim([0, upperLim]);
-obj3.setRLim([0, upperLim]);
-<span class="comment">% (the lower limit of 0 is irrelevant because setting 'baseLineOffset' will overwrite it)</span>
-obj2.polarAxs.RAxis.TickValues = [0, upperLim]; <span class="comment">% adjust axis ticks</span>
+</pre><img vspace="5" hspace="5" src="exampleCircHist_04.png" alt=""> <p>Alternatively, use the <tt>'baseLineOffset'</tt> property to unify plot appearance:</p><pre class="codeinput">baseLineOffset = 40; <span class="comment">% Set the baseline offset to have 40 % of the rho-axis range</span>
+upperLim = 20; <span class="comment">% New upper rho-axis limit</span>
+obj2.setRLim(upperLim, baseLineOffset);
+obj3.setRLim(upperLim, baseLineOffset);
+obj2.polarAxs.RAxis.TickValues = [0, upperLim]; <span class="comment">% Adjust axis ticks</span>
 obj3.polarAxs.RAxis.TickValues = [0, upperLim];
-<span class="comment">% Set the baseline offset to have 40 % of the rho-axis range</span>
-obj2.baseLineOffset = 40;
-obj3.baseLineOffset = 40;
+obj2.drawScale; <span class="comment">% Refresh rho-axis scale bar so it has the same axis ticks</span>
+obj3.drawScale;
 </pre><img vspace="5" hspace="5" src="exampleCircHist_05.png" alt=""> <h2 id="7">Plot Already-Binned Data</h2><p>Bin the generated multi-sample distribution before plotting.</p><p>Note that <tt>edges</tt> can be omitted in the <tt>CircHist</tt> call because the number of bins is implicitly defined by the number of data points in <tt>histData</tt>, but that <tt>'dataType'</tt> must be specified as <tt>'histogram'</tt>.</p><pre class="codeinput">edges = 0:10:360;
 histData = histcounts(mod([sDist; s2Dist], 360), edges);
 figure
@@ -150,7 +149,7 @@ obj4.drawScale; <span class="comment">% update scale</span>
 avgAng = circ_mean(deg2rad(sDist), arrowLen); <span class="comment">% average angle, weighted by arrow length</span>
 obj4.drawArrow(rad2deg(avgAng), [], <span class="string">'Color'</span>, <span class="string">'r'</span>, <span class="string">'LineWidth'</span>, 3) <span class="comment">% by specifying the second argument as empty, the arrow automatically ends at the plot edge</span>
 </pre><img vspace="5" hspace="5" src="exampleCircHist_09.png" alt=""> <pre class="codeinput">drawnow <span class="comment">% (Necessary for publishing this script, for whatever reason)</span>
-</pre><h2 id="14">Enable Tab Auto-Completion for Object Construction</h2><p>If <tt>functionSignatures.json</tt> is located in the same directory as the <tt>@CircHist</tt> folder, Name-Value pairs of the object-constructor call can be auto-completed as it is the case for builtin MATLAB functions. See also: <a href="https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html">https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html</a></p><p><img vspace="5" hspace="5" src="tab-auto.png" alt=""> </p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2019a</a><br></p></div><!--
+</pre><h2 id="14">Enable Tab Auto-Completion for Object Construction</h2><p>If <tt>functionSignatures.json</tt> is located in the same directory as the <tt>@CircHist</tt> folder, Name-Value pairs of the object-constructor call can be auto-completed as it is the case for builtin MATLAB functions. See also: <a href="https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html">https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html</a></p><p><img vspace="5" hspace="5" src="tab-auto.png" alt=""> </p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2019b</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% Using the CircHist Class
 %% Plot Distribution Data
@@ -213,15 +212,14 @@ drawnow
 fH.Position([3,4]) = [850,500]; % Figure dimensions
 %%
 % Alternatively, use the |'baseLineOffset'| property to unify plot appearance:
-upperLim = 20; % new upper rho-axis limit
-obj2.setRLim([0, upperLim]);
-obj3.setRLim([0, upperLim]);
-% (the lower limit of 0 is irrelevant because setting 'baseLineOffset' will overwrite it)
-obj2.polarAxs.RAxis.TickValues = [0, upperLim]; % adjust axis ticks
+baseLineOffset = 40; % Set the baseline offset to have 40 % of the rho-axis range
+upperLim = 20; % New upper rho-axis limit
+obj2.setRLim(upperLim, baseLineOffset);
+obj3.setRLim(upperLim, baseLineOffset);
+obj2.polarAxs.RAxis.TickValues = [0, upperLim]; % Adjust axis ticks
 obj3.polarAxs.RAxis.TickValues = [0, upperLim];
-% Set the baseline offset to have 40 % of the rho-axis range
-obj2.baseLineOffset = 40;
-obj3.baseLineOffset = 40;
+obj2.drawScale; % Refresh rho-axis scale bar so it has the same axis ticks
+obj3.drawScale;
 %% Plot Already-Binned Data
 % Bin the generated multi-sample distribution before plotting.
 %

@@ -59,15 +59,14 @@ drawnow
 fH.Position([3,4]) = [850,500]; % Figure dimensions
 %%
 % Alternatively, use the |'baseLineOffset'| property to unify plot appearance:
-upperLim = 20; % new upper rho-axis limit
-obj2.setRLim([0, upperLim]);
-obj3.setRLim([0, upperLim]);
-% (the lower limit of 0 is irrelevant because setting 'baseLineOffset' will overwrite it)
-obj2.polarAxs.RAxis.TickValues = [0, upperLim]; % adjust axis ticks
+baseLineOffset = 40; % Set the baseline offset to have 40 % of the rho-axis range
+upperLim = 20; % New upper rho-axis limit
+obj2.setRLim(upperLim, baseLineOffset);
+obj3.setRLim(upperLim, baseLineOffset);
+obj2.polarAxs.RAxis.TickValues = [0, upperLim]; % Adjust axis ticks
 obj3.polarAxs.RAxis.TickValues = [0, upperLim];
-% Set the baseline offset to have 40 % of the rho-axis range
-obj2.baseLineOffset = 40;
-obj3.baseLineOffset = 40;
+obj2.drawScale; % Refresh rho-axis scale bar so it has the same axis ticks
+obj3.drawScale;
 %% Plot Already-Binned Data
 % Bin the generated multi-sample distribution before plotting.
 %

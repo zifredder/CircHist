@@ -77,6 +77,11 @@
 				"type": ["numeric", "scalar"],
 				"purpose": ""
             }, {
+				"name": "barWidth",
+				"kind": "namevalue",
+				"type": ["numeric", "scalar"],
+				"purpose": "Width of histogram bars in points"
+            }, {
 				"name": "parent",
 				"kind": "namevalue",
 				"type": ["scalar", "matlab.graphics.axis.PolarAxes"],
