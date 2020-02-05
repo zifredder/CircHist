@@ -3,6 +3,8 @@
 
 [![DOI](https://zenodo.org/badge/137759876.svg)](https://zenodo.org/badge/latestdoi/137759876)
 
+[![View CircHist - circular / polar / angle histogram on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://mathworks.com/matlabcentral/fileexchange/66258)
+
 ![](@CircHist/titleImg.png )
 
 `CircHist` creates circular (polar) histograms from angle data, either distribution data or already-binned data. Works with circular and axial (bimodal) data. Circular statistics (average angle, 95 % confidence interval, resultant vector length, Rayleigh test of uniformity and circular-linear correlation) are automatically calculated using the [`CircStat` Toolbox](https://github.com/circstat/circstat-matlab) and are graphically included. All visual properties can be dynamically adjusted; see [__@CircHist/html/exampleCircHist.html__](http://htmlpreview.github.io/?https://github.com/zifredder/CircHist/blob/master/%40CircHist/html/exampleCircHist.html) for usage examples.
