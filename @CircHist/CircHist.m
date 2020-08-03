@@ -93,8 +93,8 @@ classdef CircHist < handle
     %
     % avgAng -- Average angle
     %   numeric scalar
-    %   Numeric value (degree) of the average angle. If specified, AVGANG is not
-    %   calculated from the data and this value is taken and plotted instead.
+    %   Numeric value (degree) of the average angle. If specified and nonempty, AVGANG is
+    %   not calculated from the data and this value is taken and plotted instead.
     %
     % drawAvgAngCi -- Plot 95 % CI
     %   true (default) | false
@@ -1226,10 +1226,10 @@ classdef CircHist < handle
             thOffsetZero = thOffsetZero * thetaDirSign;
             
             switch location
-                case 'topleft',     thOffsetLoc =   0; txtRot =  45;
-                case 'bottomleft',  thOffsetLoc =  90; txtRot = -45;
-                case 'bottomright', thOffsetLoc = 180; txtRot =  45;
-                case 'topright',    thOffsetLoc = 270; txtRot = -45;
+                case 'topleft',     thOffsetLoc =   0; txtRot =  45; vertAlign = 'bottom';
+                case 'bottomleft',  thOffsetLoc =  90; txtRot = -45; vertAlign = 'cap';
+                case 'bottomright', thOffsetLoc = 180; txtRot =  45; vertAlign = 'cap';
+                case 'topright',    thOffsetLoc = 270; txtRot = -45; vertAlign = 'bottom';
             end
             thOffsetLoc = thOffsetLoc * thetaDirSign;
             
@@ -1240,7 +1240,7 @@ classdef CircHist < handle
             
             self.thetaLabel = text(self.polarAxs, ...
                 deg2rad(th), rlims(2) + range(rlims)*0.2, txt, ...
-                'HorizontalAlignment', 'center', 'VerticalAlignment', 'cap', ...
+                'HorizontalAlignment', 'center', 'VerticalAlignment', vertAlign, ...
                 'Rotation', txtRot, 'FontSize', self.fontSize);
             
             self.thetaLabel.UserData.location = location;
