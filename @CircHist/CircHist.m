@@ -81,6 +81,12 @@ classdef CircHist < handle
     %   before calculation) and determines whether the average-angle line is plotted as an
     %   axis (axial data) or as a direction from the plot center (circular data).
     %
+    % pointReflectAxialData -- Point-reflect the histogram bars
+    %   false (default) | true
+    %   Specifies whether the histogram bars should be point-reflected through the diagram
+    %   center. Is allowed to be TRUE only if AREAXIALDATA is TRUE and if the input angle
+    %   data are strictly inside [0,180[.
+    %
     % scaleBarSide -- Display side of rho-axis scale bar
     %   'left' (default) | 'right'
     %   Specifies the side of the rho-axis scale bar. Access the scalebar (actually a
@@ -398,6 +404,8 @@ classdef CircHist < handle
         
         whiteDiskH      % Handles to white bars that obscure the center of the axis.
         
+        pointReflectAxialData % Optional input; specifies whether the histogram is point-reflected in the case of axial data
+        
         UserData        % Variable of arbitrary type and size; initialized as [].
     end
     
@@ -408,8 +416,14 @@ classdef CircHist < handle
         rH              % Handle to the r line.
         barH            % Array of handles to the bars (LINE objects).
         stdH            % Array of handles to the standard-deviation whiskers (LINE objects). First column thin black lines, second column thick whisker-endings.
+        barHReflected   % Subset of BARH if AREAXIALDATA and POINTREFLECTAXIALDATA, empty otherwise
+        stdHReflected   % Subset of STDH if AREAXIALDATA and POINTREFLECTAXIALDATA, empty otherwise
         arrowH          % Array of handles to drawn arrows (ANNOTATION objects).
         baseLineH       % Handle to baseline.
+    end
+    
+    properties (Access = private)
+        strictlyAxialTF
     end
     
     properties (Access = private, Constant)
@@ -438,9 +452,6 @@ classdef CircHist < handle
             % HISTCOUNTS was introduced in MATLAB R2014b; use HISTC for older versions
             hasHistcounts = exist('histcounts','file') || exist('histcounts','builtin');
             
-            % validates input to be scalar and either logical or a numeric 0 or 1
-            validLogical01 = @(tf) isscalar(tf) ...
-                && (islogical(tf) || isnumeric(tf) && ismember(tf,[0,1]));
             validScalarNum = @(N) isscalar(N) && isnumeric(N);
             
             validAx = @(h) assert(isscalar(h) && ...
@@ -477,6 +488,7 @@ classdef CircHist < handle
             def.colorAvgAngCi  = 'k';
             def.fontSize       = 13;
             def.scaleBarSide   = 'left';
+            def.pointReflectAxialData = false;
             def.UserData       = [];
             
             pr = inputParser;
@@ -494,17 +506,17 @@ classdef CircHist < handle
             addParameter(pr,'binSizeSec',def.binSizeSec ...
                 ,@(x) validateattributes(x,{'numeric'},{'scalar','positive'}));
             
-            addParameter(pr,'drawAvgAng'    ,def.drawAvgAng,validLogical01);
+            addParameter(pr,'drawAvgAng'    ,def.drawAvgAng,@mustBeNumericOrLogical);
             addParameter(pr,'avgAng'        ,def.avgAng,validScalarNum);
-            addParameter(pr,'drawAvgAngCi'  ,def.drawAvgAngCi,validLogical01);
+            addParameter(pr,'drawAvgAngCi'  ,def.drawAvgAngCi,@mustBeNumericOrLogical);
             addParameter(pr,'avgAngCi'      ,def.avgAngCi,validScalarNum);
-            addParameter(pr,'drawR'         ,def.drawR,validLogical01);
+            addParameter(pr,'drawR'         ,def.drawR,@mustBeNumericOrLogical);
             addParameter(pr,'r'             ,def.r,validScalarNum);
             addParameter(pr,'baseLineOffset',def.baseLineOffset, ...
                 @(N) isnumeric(N) && numel(N) < 3);
             addParameter(pr,'barWidth'      ,def.barWidth,validScalarNum);
             addParameter(pr,'adjustSlope'   ,def.adjustSlope,validScalarNum);
-            addParameter(pr,'areAxialData'  ,def.axialData,validLogical01);
+            addParameter(pr,'areAxialData'  ,def.axialData,@mustBeNumericOrLogical);
             addParameter(pr,'ax'            ,def.axes, validAx);
             addParameter(pr,'parent'        ,def.axes, validAx);
             
@@ -516,6 +528,7 @@ classdef CircHist < handle
             addParameter(pr,'colorR',     def.colorR,     validColor);
             addParameter(pr,'colorAvgAngCi',def.colorAvgAngCi,validColor);
             addParameter(pr,'fontSize',   def.fontSize,   validScalarNum);
+            addParameter(pr,'pointReflectAxialData', def.pointReflectAxialData, @mustBeNumericOrLogical);
             addParameter(pr,'UserData',   def.UserData);
             
             parse(pr,data,varargin{:});
@@ -587,6 +600,7 @@ classdef CircHist < handle
                     ,' and the second column contains the standard deviation of the' ...
                     ,' respective bin.']);
             end
+            
             
             %% use this function handle to transform axial data on demand
             % axial dimension, input to CIRCSTAT functions
@@ -732,11 +746,21 @@ classdef CircHist < handle
             self.edges = edges;
             self.histData = histData;
             
+            
+            % Are the histogram data inside [0,180[?
+            barCenters = self.edges(1:end-1) + abs(self.edges(1) - self.edges(2))/2;
+            self.strictlyAxialTF = ...
+                all(barCenters >= 0) && all(barCenters < 180);
+            
+            self.validatePropPRAD(pr.Results.pointReflectAxialData);
+            
+            
             % correlation analysis
             [self.corrAnR,self.corrAnP] = ...
                 circ_corrcl(axTrans(binCentersRad),histData(:,1));
             corrAnR = self.corrAnR;
             corrAnP = self.corrAnP;
+            
             
             %% initialize figure, set visual properties
             % axis labels
@@ -802,6 +826,9 @@ classdef CircHist < handle
             
             %% draw bars and whiskers
             self.drawBars;
+            
+            % do histogram bar reflection if applicable
+            self.pointReflectAxialData = pr.Results.pointReflectAxialData;
             
             %% draw baseline, apply baseline offset
             self.drawBaseLine;
@@ -1378,7 +1405,8 @@ classdef CircHist < handle
             % implemented by linking the respective property of all objects using linkprop
             % and then only changing the property of one.
             %
-            %   circHistObj.colorStd([.5,.5,.5]);
+            %   circHistObj.colorStd = [0.5 0.5 0.5];
+            
             self.colorStd = color;
             set(self.stdH, 'color', color);
         end
@@ -1391,7 +1419,7 @@ classdef CircHist < handle
             % the width of the ending is scaled proportionally to the width-change of the
             % "main" line.
             %
-            %   circHistObj.stdWidth(newWidth);
+            %   circHistObj.stdWidth = newWidth;
             
             oldWidth = self.stdWidth;
             self.stdWidth = width;
@@ -1411,6 +1439,97 @@ classdef CircHist < handle
             
             set(stdMain,'lineWidth',width);
             set(stdEnding,'lineWidth',newEndingWidth);
+        end
+        
+        
+        %%
+        function set.pointReflectAxialData(self, tfPRAD)
+            % Adjust whether the histogram bars are point-reflected through the diagram
+            % center. Can only be TRUE if the underlying data are strictly axial, i. e.,
+            % the histogram bars are inside [0,180[.
+            %
+            %   circHistObj.pointReflectAxialData = true;
+            
+            self.validatePropPRAD(tfPRAD);
+            
+            allValid = @(h) ~isempty(h) && all(isvalid(h), 'all');
+            
+            if isempty(self.pointReflectAxialData) || tfPRAD ~= self.pointReflectAxialData
+                
+                if tfPRAD
+                    % Clone graphics objects so they have the same look
+                    bhRefl = copyobj(self.barH, self.parent);
+                    shRefl = copyobj(self.stdH, self.parent);
+                    
+                    hasWhiskers = ~isempty(shRefl);
+                    
+                    set(bhRefl, 'Tag', 'histBarReflected');
+                    
+                    if hasWhiskers
+                        shRefl = reshape(shRefl, size(self.stdH));
+                        set(shRefl(:,1), 'Tag', 'stdWhiskReflected');
+                        set(shRefl(:,2), 'Tag', 'stdWhiskEndReflected');
+                    end
+                    
+                    
+                    % Reflect objects by adding 180 deg to their angle-data
+                    for ii = 1:numel(bhRefl)
+                        bhRefl(ii).ThetaData = bhRefl(ii).ThetaData + pi;
+                    end
+                    
+                    if hasWhiskers
+                        for j = 1:size(shRefl, 1)
+                            shRefl(j, 1).ThetaData = shRefl(j, 1).ThetaData + pi;
+                            shRefl(j, 2).ThetaData = shRefl(j, 2).ThetaData + pi;
+                        end
+                    end
+                    
+                    uistack(bhRefl, 'bottom');
+                    
+                    % move other graphics objects on top where they belong
+                    if allValid(self.avgAngH)
+                        uistack(self.avgAngH, 'top'); end
+                    
+                    if allValid(self.avgAngCiH)
+                        uistack(self.avgAngCiH, 'top'); end
+                    
+                    if allValid(self.rH)
+                        uistack(self.rH, 'top'); end
+                    
+                    
+                    % modify handle properties
+                    self.barH = [self.barH;bhRefl];
+                    self.stdH = [self.stdH;shRefl];
+                    
+                    self.barHReflected = bhRefl;
+                    self.stdHReflected = shRefl;
+                    
+                    
+                else % delete the graphics objects and remove their handles
+                    
+                    if ~isempty(self.barHReflected)
+                        
+                        tfNonReflected = strcmp(get(self.barH, 'Tag'), 'histBar');
+                        
+                        self.barH = self.barH(tfNonReflected);
+                        
+                        if ~isempty(self.stdH)
+                            tfNonReflectedStd = strcmp(get(self.stdH, 'Tag'), 'stdWhisk');
+                            self.stdH = self.stdH(tfNonReflectedStd, :);
+                        end
+                        
+                        
+                        delete(self.barHReflected);
+                        delete(self.stdHReflected);
+                        
+                        self.barHReflected = [];
+                        self.stdHReflected = [];
+                    end
+                end
+                
+                
+                self.pointReflectAxialData = tfPRAD;
+            end
         end
         
         
@@ -1607,11 +1726,12 @@ classdef CircHist < handle
             %
             %   obj.updateArrows;
             
-            pax = self.polarAxs;
             % delete invalid arrows and RETURN if there are none
             mValid = isvalid(self.arrowH);
             self.arrowH = self.arrowH(mValid);
             if nnz(mValid) < 1, return, end
+            
+            pax = self.polarAxs;
             
             arrwH = self.arrowH;
             axUnitsOld = pax.Units;
@@ -1677,6 +1797,8 @@ classdef CircHist < handle
             stdValsUpper = stdValsUpper(validStd);
 
             
+            hasReflectedBars = ~isempty(self.barHReflected);
+            
             
             if isempty(self.barH) % create bars
                 
@@ -1730,6 +1852,13 @@ classdef CircHist < handle
             end
             
             
+            if hasReflectedBars
+                barValsUpper = [barValsUpper; barValsUpper];
+                barValsLower = [barValsLower; barValsLower];
+                validBars = [validBars; validBars];
+            end
+            
+            
             % If the lower rho-axis limit is below 0, hide bars that are not
             % represented in the scale
             if lowerLim > 0
@@ -1737,7 +1866,6 @@ classdef CircHist < handle
             else
                 hideBarTF = false(size(barValsUpper));
             end
-            
             
             visOnOff = repmat({'on'}, size(self.barH));
             visOnOff(hideBarTF) = {'off'};
@@ -1766,7 +1894,7 @@ classdef CircHist < handle
             
             
             % Adjust lower radius data point of bars if it is > 0 because else, the bars
-            % are mirrored through the plot center
+            % pass through the plot center
             if barValsLower(1) ~= lowerLim % lowerLim has changed since last DRAWBARS
                 
                 if lowerLim > 0 % Set the bar-baseline to the lower scale limit
@@ -1848,6 +1976,19 @@ classdef CircHist < handle
                     end
                     set(self.whiteDiskH, 'Visible', 'on');
                 end
+            end
+        end
+        
+        
+        
+        function validatePropPRAD(self, tf)
+            
+            mustBeNumericOrLogical(tf);
+            
+            if tf
+                assert(self.areAxialData && self.strictlyAxialTF, ...
+                    ['Error setting ''pointReflectAxialData'' to TRUE: Data must be ', ...
+                    'specified as axial and must be strictly axial (inside [0,180[).']);
             end
         end
     end

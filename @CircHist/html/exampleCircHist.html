@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.7"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-12-11"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
+      --><title>Using the CircHist Class</title><meta name="generator" content="MATLAB 9.8"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2020-11-09"><meta name="DC.source" content="exampleCircHist.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -23,7 +23,7 @@ a:visited { color:#004aa0; text-decoration:none; }
 
 p { padding:0px; margin:0px 0px 20px; }
 img { padding:0px; margin:0px 0px 20px; border:none; }
-p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
 
 ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
 ul li { padding:0px; margin:0px 0px 7px 0px; }
@@ -52,6 +52,7 @@ span.comment { color:#228B22 }
 span.string { color:#A020F0 }
 span.untermstring { color:#B20000 }
 span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
 
 .footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
 .footer p { margin:0px; }
@@ -66,7 +67,7 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 
 
 
-  </style></head><body><div class="content"><h1>Using the CircHist Class</h1><!--introduction--><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Plot Distribution Data</a></li><li><a href="#4">Plot Multi-Sample Distribution</a></li><li><a href="#5">Combine Multiple Histograms in One Figure</a></li><li><a href="#7">Plot Already-Binned Data</a></li><li><a href="#8">Axial Data</a></li><li><a href="#11">Draw Arrows</a></li><li><a href="#14">Enable Tab Auto-Completion for Object Construction</a></li></ul></div><h2 id="1">Plot Distribution Data</h2><p>Generate a noisy sample (von Mises distribution with <tt>theta</tt> == 90 deg).</p><pre class="codeinput">rng <span class="string">default</span>
+  </style></head><body><div class="content"><h1>Using the CircHist Class</h1><!--introduction--><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Plot Distribution Data</a></li><li><a href="#4">Plot Multi-Sample Distribution</a></li><li><a href="#5">Combine Multiple Histograms in One Figure</a></li><li><a href="#7">Plot Already-Binned Data</a></li><li><a href="#8">Axial Data</a></li><li><a href="#11">Strictly axial data inside [0,180[ deg</a></li><li><a href="#13">Draw Arrows</a></li><li><a href="#16">Enable Tab Auto-Completion for Object Construction</a></li></ul></div><h2 id="1">Plot Distribution Data</h2><p>Generate a noisy sample (von Mises distribution with <tt>theta</tt> == 90 deg).</p><pre class="codeinput">rng <span class="string">default</span>
 sDist = mod(rad2deg(circ_vmrnd(pi/2, 2, 100)), 360); <span class="comment">% generate sample, convert to deg</span>
 nBins = 36; <span class="comment">% number of bins, makes bin size of 10 deg</span>
 </pre><p>Plot the circular histogram:</p><pre class="codeinput">obj1 = CircHist(sDist, nBins);
@@ -131,7 +132,15 @@ noise = (rand(size(sDist)) - 0.5) * 10;
 sAxial = [sDist; sDist + 180 + noise];
 </pre><p>Call <tt>CircHist</tt> with <tt>'areAxialData'</tt> specified as <tt>true</tt>.</p><pre class="codeinput">figure
 CircHist(sAxial, nBins, <span class="string">'areAxialData'</span>, true);
-</pre><img vspace="5" hspace="5" src="exampleCircHist_07.png" alt=""> <p>Note that now the average angle is indicated by an axis that halves the diagram at this angle.</p><h2 id="11">Draw Arrows</h2><pre class="codeinput">figure
+</pre><img vspace="5" hspace="5" src="exampleCircHist_07.png" alt=""> <p>Note that now the average angle is indicated by an axis that halves the diagram at this angle.</p><h2 id="11">Strictly axial data inside [0,180[ deg</h2><pre class="codeinput">sAxialStrict = mod(sAxial + 55, 180); <span class="comment">% Wrap data into [0,180[</span>
+<span class="comment">% Note that the bin edges must be specified explicitly because the binning range defaults</span>
+<span class="comment">% to the full circle if a scalar for the number of bins is given.</span>
+figure
+objAxStrict = CircHist(sAxialStrict, 0:10:180, <span class="string">'areAxialData'</span>, true);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_08.png" alt=""> <p>Although these data are axial, the histogram gives the impression as if the data have a single peak, just as circular data do. Hence, it might make sense to visualize them by point-reflecting the histogram bars through the center by setting <tt>'pointReflectAxialData'</tt> to <tt>true</tt>. This way, the axiality of the data becomes more apparent.</p><pre class="codeinput">objAxStrict.pointReflectAxialData = true;
+<span class="comment">% Change the color to indicate that these bars are not actual data</span>
+set(objAxStrict.barHReflected, <span class="string">'color'</span>, [1 1 1] * 0.6);
+</pre><img vspace="5" hspace="5" src="exampleCircHist_09.png" alt=""> <h2 id="13">Draw Arrows</h2><pre class="codeinput">figure
 rng <span class="string">default</span>
 arrowLen = randn(numel(sDist), 1); <span class="comment">% random arrow lengths</span>
 arrowLen = arrowLen / max(arrowLen);
@@ -144,12 +153,12 @@ obj4.polarAxs.ThetaAxis.MinorTickValues = [];
 thetaticks(0:90:360);
 arrowH = obj4.drawArrow(sDist, arrowLen);
 obj4.drawScale; <span class="comment">% update scale</span>
-</pre><img vspace="5" hspace="5" src="exampleCircHist_08.png" alt=""> <p>Change visual properties and add another arrow.</p><pre class="codeinput">set(arrowH, <span class="string">'HeadStyle'</span>, <span class="string">'plain'</span>, <span class="string">'HeadWidth'</span>, 3)
+</pre><img vspace="5" hspace="5" src="exampleCircHist_10.png" alt=""> <p>Change visual properties and add another arrow.</p><pre class="codeinput">set(arrowH, <span class="string">'HeadStyle'</span>, <span class="string">'plain'</span>, <span class="string">'HeadWidth'</span>, 3)
 <span class="comment">% Draw a single arrow that ends at the outer plot edge</span>
 avgAng = circ_mean(deg2rad(sDist), arrowLen); <span class="comment">% average angle, weighted by arrow length</span>
 obj4.drawArrow(rad2deg(avgAng), [], <span class="string">'Color'</span>, <span class="string">'r'</span>, <span class="string">'LineWidth'</span>, 3) <span class="comment">% by specifying the second argument as empty, the arrow automatically ends at the plot edge</span>
-</pre><img vspace="5" hspace="5" src="exampleCircHist_09.png" alt=""> <pre class="codeinput">drawnow <span class="comment">% (Necessary for publishing this script, for whatever reason)</span>
-</pre><h2 id="14">Enable Tab Auto-Completion for Object Construction</h2><p>If <tt>functionSignatures.json</tt> is located in the same directory as the <tt>@CircHist</tt> folder, Name-Value pairs of the object-constructor call can be auto-completed as it is the case for builtin MATLAB functions. See also: <a href="https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html">https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html</a></p><p><img vspace="5" hspace="5" src="tab-auto.png" alt=""> </p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2019b</a><br></p></div><!--
+</pre><img vspace="5" hspace="5" src="exampleCircHist_11.png" alt=""> <pre class="codeinput">drawnow <span class="comment">% (Necessary for publishing this script, for whatever reason)</span>
+</pre><h2 id="16">Enable Tab Auto-Completion for Object Construction</h2><p>If <tt>functionSignatures.json</tt> is located in the same directory as the <tt>@CircHist</tt> folder, Name-Value pairs of the object-constructor call can be auto-completed as it is the case for builtin MATLAB functions. See also: <a href="https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html">https://mathworks.com/help/matlab/matlab_prog/customize-code-suggestions-and-completions.html</a></p><p><img vspace="5" hspace="5" src="tab-auto.png" alt=""> </p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2020a</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% Using the CircHist Class
 %% Plot Distribution Data
@@ -243,6 +252,21 @@ CircHist(sAxial, nBins, 'areAxialData', true);
 %%
 % Note that now the average angle is indicated by an axis that halves the diagram at this
 % angle.
+%% Strictly axial data inside [0,180[ deg
+sAxialStrict = mod(sAxial + 55, 180); % Wrap data into [0,180[
+% Note that the bin edges must be specified explicitly because the binning range defaults
+% to the full circle if a scalar for the number of bins is given.
+figure
+objAxStrict = CircHist(sAxialStrict, 0:10:180, 'areAxialData', true);
+%%
+% Although these data are axial, the histogram gives the impression as if the data have a
+% single peak, just as circular data do. Hence, it might make sense to visualize them by
+% point-reflecting the histogram bars through the center by setting
+% |'pointReflectAxialData'| to |true|. This way, the axiality of the data becomes more
+% apparent.
+objAxStrict.pointReflectAxialData = true;
+% Change the color to indicate that these bars are not actual data
+set(objAxStrict.barHReflected, 'color', [1 1 1] * 0.6);
 %% Draw Arrows
 figure
 rng default

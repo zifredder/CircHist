@@ -90,6 +90,21 @@ CircHist(sAxial, nBins, 'areAxialData', true);
 %%
 % Note that now the average angle is indicated by an axis that halves the diagram at this
 % angle.
+%% Strictly axial data inside [0,180[ deg
+sAxialStrict = mod(sAxial + 55, 180); % Wrap data into [0,180[
+% Note that the bin edges must be specified explicitly because the binning range defaults
+% to the full circle if a scalar for the number of bins is given.
+figure
+objAxStrict = CircHist(sAxialStrict, 0:10:180, 'areAxialData', true);
+%%
+% Although these data are axial, the histogram gives the impression as if the data have a
+% single peak, just as circular data do. Hence, it might make sense to visualize them by
+% point-reflecting the histogram bars through the center by setting
+% |'pointReflectAxialData'| to |true|. This way, the axiality of the data becomes more
+% apparent.
+objAxStrict.pointReflectAxialData = true;
+% Change the color to indicate that these bars are not actual data
+set(objAxStrict.barHReflected, 'color', [1 1 1] * 0.6);
 %% Draw Arrows
 figure
 rng default

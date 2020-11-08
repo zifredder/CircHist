@@ -31,6 +31,11 @@
 				"kind": "namevalue",
 				"type": [["logical", "scalar"], ["numeric", "scalar"]],
 				"purpose": "Specify whether input-data are axial or circular"
+            }, {
+				"name": "pointReflectAxialData",
+				"kind": "namevalue",
+				"type": [["logical", "scalar"], ["numeric", "scalar"]],
+				"purpose": "Specify whether the histogram bars are point-reflected"
 			}, {
 				"name": "scaleBarSide",
 				"kind": "namevalue",
